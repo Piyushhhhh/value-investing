@@ -252,27 +252,36 @@ async function fetchStockData(ticker, env) {
     getLatestFact(usGaap, "WeightedAverageNumberOfDilutedSharesOutstanding", "shares") ||
     getLatestFact(usGaap, "WeightedAverageNumberOfSharesOutstandingBasic", "shares");
 
-  const revenue = latestValue(revenueSeries);
-  const grossProfit = latestValue(grossProfitSeries);
-  const netIncome = latestValue(netIncomeSeries);
-  const sga = latestValue(sgaSeries);
-  const rd = latestValue(rdSeries);
-  const ebit = latestValue(ebitSeries);
-  const interestExpense = latestValue(interestSeries);
+  const currency =
+    revenueSeries.unit ||
+    netIncomeSeries.unit ||
+    assetsSeries.unit ||
+    "USD";
+  const fxRate = await getFxRate(currency, env);
+  const convert = (value) =>
+    value === null || value === undefined ? null : value * fxRate;
 
-  const totalAssets = latestValue(assetsSeries);
-  const totalLiabilities = latestValue(liabilitiesSeries);
-  const totalEquity = latestValue(equitySeries);
-  const currentAssets = latestValue(currentAssetsSeries);
-  const currentLiabilities = latestValue(currentLiabilitiesSeries);
-  const retainedEarnings = latestValue(retainedSeries);
-  const longDebt = latestValue(longDebtSeries);
-  const shortDebt = latestValue(shortDebtSeries);
+  const revenue = convert(latestValue(revenueSeries));
+  const grossProfit = convert(latestValue(grossProfitSeries));
+  const netIncome = convert(latestValue(netIncomeSeries));
+  const sga = convert(latestValue(sgaSeries));
+  const rd = convert(latestValue(rdSeries));
+  const ebit = convert(latestValue(ebitSeries));
+  const interestExpense = convert(latestValue(interestSeries));
 
-  const operatingCashFlow = latestValue(operatingCashFlowSeries);
-  const capex = latestValue(capexSeries);
-  const dividendsPaid = latestValue(dividendsSeries);
-  const shareRepurchases = latestValue(repurchaseSeries);
+  const totalAssets = convert(latestValue(assetsSeries));
+  const totalLiabilities = convert(latestValue(liabilitiesSeries));
+  const totalEquity = convert(latestValue(equitySeries));
+  const currentAssets = convert(latestValue(currentAssetsSeries));
+  const currentLiabilities = convert(latestValue(currentLiabilitiesSeries));
+  const retainedEarnings = convert(latestValue(retainedSeries));
+  const longDebt = convert(latestValue(longDebtSeries));
+  const shortDebt = convert(latestValue(shortDebtSeries));
+
+  const operatingCashFlow = convert(latestValue(operatingCashFlowSeries));
+  const capex = convert(latestValue(capexSeries));
+  const dividendsPaid = convert(latestValue(dividendsSeries));
+  const shareRepurchases = convert(latestValue(repurchaseSeries));
 
   const grossMargin = revenue && grossProfit ? toPercent(grossProfit / revenue) : null;
   const netMargin = revenue && netIncome ? toPercent(netIncome / revenue) : null;
@@ -290,7 +299,9 @@ async function fetchStockData(ticker, env) {
   const freeCashFlow =
     operatingCashFlow !== null && capex !== null
       ? operatingCashFlow - Math.abs(capex)
-      : null;
+      : operatingCashFlow !== null
+        ? operatingCashFlow
+        : null;
 
   const workingCapital =
     currentAssets !== null && currentLiabilities !== null
@@ -373,6 +384,8 @@ async function fetchStockData(ticker, env) {
     price: marketPrice,
     sharesOutstanding: shares || null,
     marketCap,
+    currency,
+    fxRate: fxRate !== 1 ? fxRate : null,
     lastUpdated: todayKey(),
     metrics: {
       grossMargin,
@@ -502,7 +515,18 @@ async function fetchQuoteData(symbol, key) {
 
 function getAnnualSeries(usGaap, tag, unit = "USD") {
   const fact = usGaap?.[tag];
-  const items = fact?.units?.[unit] || [];
+  const units = fact?.units || {};
+  let selectedUnit = unit;
+  let items = units[unit];
+  if (!items || !items.length) {
+    const keys = Object.keys(units);
+    if (keys.length) {
+      selectedUnit = keys[0];
+      items = units[selectedUnit];
+    } else {
+      items = [];
+    }
+  }
   const annual = items.filter(
     (item) =>
       item.form &&
@@ -522,7 +546,9 @@ function getAnnualSeries(usGaap, tag, unit = "USD") {
     }
   }
 
-  return Array.from(byYear.values()).sort((a, b) => (b.fy || 0) - (a.fy || 0));
+  const sorted = Array.from(byYear.values()).sort((a, b) => (b.fy || 0) - (a.fy || 0));
+  sorted.unit = selectedUnit;
+  return sorted;
 }
 
 function firstSeries(usGaap, tags, unit = "USD") {
@@ -530,7 +556,9 @@ function firstSeries(usGaap, tags, unit = "USD") {
     const series = getAnnualSeries(usGaap, tag, unit);
     if (series.length) return series;
   }
-  return [];
+  const empty = [];
+  empty.unit = unit;
+  return empty;
 }
 
 function getLatestFact(usGaap, tag, unit) {
@@ -695,4 +723,22 @@ function impliedGrowthRate({
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
+}
+
+async function getFxRate(currency, env) {
+  if (!currency || currency === "USD") return 1;
+  const cacheKey = `fx:${currency}`;
+  const cached = await getCache(env, cacheKey, true);
+  if (cached && cached.rate) return cached.rate;
+
+  const url = new URL("https://api.exchangerate.host/latest");
+  url.search = new URLSearchParams({ base: currency, symbols: "USD" }).toString();
+  const res = await fetch(url.toString());
+  if (!res.ok) return 1;
+  const data = await res.json();
+  const rate = data?.rates?.USD;
+  if (!rate || Number.isNaN(rate)) return 1;
+
+  await putCache(env, cacheKey, { rate });
+  return rate;
 }

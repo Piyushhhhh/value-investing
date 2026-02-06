@@ -226,11 +226,14 @@ function parseHash() {
 }
 
 function goTo(route, ticker) {
-  if (ticker) {
-    window.location.hash = `#/${route}/${encodeURIComponent(ticker)}`;
-  } else {
-    window.location.hash = `#/${route}`;
+  const next = ticker
+    ? `#/${route}/${encodeURIComponent(ticker)}`
+    : `#/${route}`;
+  if (window.location.hash === next) {
+    render();
+    return;
   }
+  window.location.hash = next;
 }
 
 function scoreChecklist(metrics) {
