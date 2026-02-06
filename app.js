@@ -163,21 +163,11 @@ function renderSuggestions(list) {
   list.forEach((item) => {
     const row = document.createElement("div");
     row.className = "suggestion-item";
+    row.dataset.ticker = item.ticker;
     row.innerHTML = `
       <span class="suggestion-ticker">${item.ticker}</span>
       <span class="suggestion-title">${item.title || ""}</span>
     `;
-    const onSelect = (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const input = $("ticker-input");
-      if (input) input.value = item.ticker;
-      container.classList.remove("is-active");
-      suggestionsState.open = false;
-      goTo("analyzer", item.ticker);
-    };
-    row.addEventListener("pointerdown", onSelect);
-    row.addEventListener("click", onSelect);
     container.appendChild(row);
   });
 }
@@ -620,6 +610,23 @@ function init() {
       closeSuggestions();
       goTo("analyzer", picked);
     });
+  }
+
+  const suggestions = $("search-suggestions");
+  if (suggestions) {
+    const onPick = (event) => {
+      const row = event.target.closest(".suggestion-item");
+      if (!row) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const ticker = row.dataset.ticker;
+      if (!ticker) return;
+      if (tickerInput) tickerInput.value = ticker;
+      closeSuggestions();
+      goTo("analyzer", ticker);
+    };
+    suggestions.addEventListener("pointerdown", onPick);
+    suggestions.addEventListener("click", onPick);
   }
 
   $("nav-search").addEventListener("click", () => {
