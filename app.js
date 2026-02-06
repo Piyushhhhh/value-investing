@@ -157,6 +157,19 @@ function closeSuggestions() {
   suggestionsState.open = false;
 }
 
+async function resolveTickerFromInput(rawValue) {
+  const value = rawValue.trim();
+  if (!value) return "";
+  if (suggestionsState.items.length) return suggestionsState.items[0].ticker;
+
+  if (API_BASE && value.length >= 2) {
+    const results = await fetchSuggestions(value);
+    if (results.length) return results[0].ticker;
+  }
+
+  return value.toUpperCase();
+}
+
 function setActiveRoute(route) {
   routes.forEach((name) => {
     const section = document.querySelector(`[data-route="${name}"]`);
@@ -538,11 +551,10 @@ function init() {
       setTimeout(closeSuggestions, 150);
     });
 
-    tickerInput.addEventListener("keydown", (event) => {
+    tickerInput.addEventListener("keydown", async (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
-        const value = tickerInput.value.trim().toUpperCase();
-        const picked = suggestionsState.items.length ? suggestionsState.items[0].ticker : value;
+        const picked = await resolveTickerFromInput(tickerInput.value);
         if (!picked) return;
         closeSuggestions();
         goTo("analyzer", picked);
@@ -551,9 +563,8 @@ function init() {
   }
 
   if (tickerGo) {
-    tickerGo.addEventListener("click", () => {
-      const value = tickerInput?.value.trim().toUpperCase() || "";
-      const picked = suggestionsState.items.length ? suggestionsState.items[0].ticker : value;
+    tickerGo.addEventListener("click", async () => {
+      const picked = await resolveTickerFromInput(tickerInput?.value || "");
       if (!picked) return;
       closeSuggestions();
       goTo("analyzer", picked);
