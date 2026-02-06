@@ -2,6 +2,10 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const STALE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_DAILY_NEW_TICKER_CAP = 25;
 
+const SEC_TICKER_URL = "https://www.sec.gov/files/company_tickers.json";
+const SEC_FACTS_BASE = "https://data.sec.gov/api/xbrl/companyfacts";
+const FMP_QUOTE_URL = "https://financialmodelingprep.com/stable/quote";
+
 const TRENDING = [
   "AAPL",
   "MSFT",
@@ -25,8 +29,10 @@ const TRENDING = [
   "PEP",
 ];
 
+const ANNUAL_FORMS = new Set(["10-K", "10-K/A", "20-F", "40-F"]);
+
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders() });
@@ -104,87 +110,118 @@ async function handleStock(rawTicker, env) {
 }
 
 async function fetchStockData(ticker, env) {
-  const normalized = ticker.includes(".") ? ticker.replace(".", "-") : ticker;
-  const profile = await fmpFetch(`/profile/${normalized}`, {}, env);
-  const income = await fmpFetch(
-    `/income-statement/${normalized}`,
-    { period: "annual", limit: 10 },
-    env
-  );
-  const balance = await fmpFetch(
-    `/balance-sheet-statement/${normalized}`,
-    { period: "annual", limit: 10 },
-    env
-  );
-  const cashflow = await fmpFetch(
-    `/cash-flow-statement/${normalized}`,
-    { period: "annual", limit: 10 },
-    env
-  );
-
-  const company = profile?.[0] || {};
-  const incomeLatest = income?.[0] || {};
-  const balanceLatest = balance?.[0] || {};
-  const cashLatest = cashflow?.[0] || {};
-
-  const revenue = toNumber(incomeLatest.revenue);
-  const grossProfit = toNumber(incomeLatest.grossProfit);
-  const netIncome = toNumber(incomeLatest.netIncome);
-  const sga = toNumber(
-    incomeLatest.sellingGeneralAndAdministrativeExpenses ?? incomeLatest.sgaExpense
-  );
-  const rd = toNumber(
-    incomeLatest.researchAndDevelopmentExpenses ?? incomeLatest.researchAndDevelopment
-  );
-  const ebit = toNumber(incomeLatest.ebit ?? incomeLatest.operatingIncome);
-  const interestExpense = Math.abs(toNumber(incomeLatest.interestExpense)) || null;
-
-  const shortDebt = toNumber(balanceLatest.shortTermDebt);
-  const longDebt = toNumber(balanceLatest.longTermDebt);
-  let totalDebt = toNumber(balanceLatest.totalDebt);
-  if (totalDebt === null) {
-    const parts = [shortDebt, longDebt].filter((v) => v !== null);
-    totalDebt = parts.length ? parts.reduce((sum, v) => sum + v, 0) : null;
+  const cik = await lookupCik(ticker, env);
+  if (!cik) {
+    throw new Error("CIK not found for ticker");
   }
 
-  const totalEquity = toNumber(balanceLatest.totalStockholdersEquity);
-  const totalAssets = toNumber(balanceLatest.totalAssets);
-  const totalLiabilities = toNumber(balanceLatest.totalLiabilities);
-  const currentAssets = toNumber(balanceLatest.totalCurrentAssets);
-  const currentLiabilities = toNumber(balanceLatest.totalCurrentLiabilities);
-  const retainedEarnings = toNumber(balanceLatest.retainedEarnings);
+  const facts = await secFetchJson(`${SEC_FACTS_BASE}/CIK${cik}.json`, env);
+  const usGaap = facts?.facts?.["us-gaap"] || {};
 
-  const operatingCashFlow = toNumber(cashLatest.operatingCashFlow);
-  const capexRaw = toNumber(cashLatest.capitalExpenditure);
-  const capex = capexRaw === null ? null : Math.abs(capexRaw);
-  const dividendsRaw = toNumber(cashLatest.dividendsPaid);
-  const dividendsPaid = dividendsRaw === null ? null : Math.abs(dividendsRaw);
-  const repurchaseRaw = toNumber(cashLatest.commonStockRepurchased);
-  const shareRepurchases = repurchaseRaw === null ? null : Math.abs(repurchaseRaw);
+  const revenueSeries = firstSeries(usGaap, [
+    "Revenues",
+    "RevenueFromContractWithCustomerExcludingAssessedTax",
+    "SalesRevenueNet",
+  ]);
+  const grossProfitSeries = getAnnualSeries(usGaap, "GrossProfit");
+  const netIncomeSeries = getAnnualSeries(usGaap, "NetIncomeLoss");
+  const sgaSeries = getAnnualSeries(usGaap, "SellingGeneralAndAdministrativeExpense");
+  const rdSeries = getAnnualSeries(usGaap, "ResearchAndDevelopmentExpense");
+  const ebitSeries = firstSeries(usGaap, [
+    "OperatingIncomeLoss",
+    "EarningsBeforeInterestAndTaxes",
+  ]);
+  const interestSeries = firstSeries(usGaap, [
+    "InterestExpense",
+    "InterestExpenseDebt",
+  ]);
 
-  const price = toNumber(company.price);
-  const sharesOutstanding = toNumber(company.sharesOutstanding);
-  const marketCap = toNumber(company.mktCap);
+  const assetsSeries = getAnnualSeries(usGaap, "Assets");
+  const liabilitiesSeries = getAnnualSeries(usGaap, "Liabilities");
+  const equitySeries = firstSeries(usGaap, [
+    "StockholdersEquity",
+    "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",
+  ]);
+  const currentAssetsSeries = getAnnualSeries(usGaap, "AssetsCurrent");
+  const currentLiabilitiesSeries = getAnnualSeries(usGaap, "LiabilitiesCurrent");
+  const retainedSeries = getAnnualSeries(usGaap, "RetainedEarningsAccumulatedDeficit");
+
+  const longDebtSeries = firstSeries(usGaap, [
+    "LongTermDebt",
+    "LongTermDebtNoncurrent",
+    "LongTermDebtAndCapitalLeaseObligations",
+  ]);
+  const shortDebtSeries = firstSeries(usGaap, [
+    "DebtCurrent",
+    "LongTermDebtCurrent",
+  ]);
+
+  const operatingCashFlowSeries = getAnnualSeries(
+    usGaap,
+    "NetCashProvidedByUsedInOperatingActivities"
+  );
+  const capexSeries = firstSeries(usGaap, [
+    "PaymentsToAcquirePropertyPlantAndEquipment",
+    "CapitalExpenditures",
+  ]);
+  const dividendsSeries = firstSeries(usGaap, [
+    "PaymentsOfDividends",
+    "PaymentsOfDividendsCommonStock",
+  ]);
+  const repurchaseSeries = firstSeries(usGaap, [
+    "RepurchaseOfCommonStock",
+    "PaymentsForRepurchaseOfCommonStock",
+  ]);
+
+  const shares = getLatestFact(usGaap, "EntityCommonStockSharesOutstanding", "shares");
+
+  const revenue = latestValue(revenueSeries);
+  const grossProfit = latestValue(grossProfitSeries);
+  const netIncome = latestValue(netIncomeSeries);
+  const sga = latestValue(sgaSeries);
+  const rd = latestValue(rdSeries);
+  const ebit = latestValue(ebitSeries);
+  const interestExpense = latestValue(interestSeries);
+
+  const totalAssets = latestValue(assetsSeries);
+  const totalLiabilities = latestValue(liabilitiesSeries);
+  const totalEquity = latestValue(equitySeries);
+  const currentAssets = latestValue(currentAssetsSeries);
+  const currentLiabilities = latestValue(currentLiabilitiesSeries);
+  const retainedEarnings = latestValue(retainedSeries);
+  const longDebt = latestValue(longDebtSeries);
+  const shortDebt = latestValue(shortDebtSeries);
+
+  const operatingCashFlow = latestValue(operatingCashFlowSeries);
+  const capex = latestValue(capexSeries);
+  const dividendsPaid = latestValue(dividendsSeries);
+  const shareRepurchases = latestValue(repurchaseSeries);
 
   const grossMargin = revenue && grossProfit ? toPercent(grossProfit / revenue) : null;
   const netMargin = revenue && netIncome ? toPercent(netIncome / revenue) : null;
   const sgaEfficiency = revenue && sga ? toPercent(sga / revenue) : null;
   const rdReliance = revenue && rd ? toPercent(rd / revenue) : null;
-  const interestCoverage = ebit && interestExpense ? toRatio(ebit / interestExpense) : null;
+  const interestCoverage = ebit && interestExpense ? toRatio(Math.abs(ebit) / Math.abs(interestExpense)) : null;
+  const totalDebt = sumNumbers(longDebt, shortDebt);
   const debtToEquity = totalDebt && totalEquity ? toRatio(totalDebt / totalEquity) : null;
   const roe = netIncome && totalEquity ? toPercent(netIncome / totalEquity) : null;
-  const capexEfficiency = operatingCashFlow && capex ? toPercent(capex / operatingCashFlow) : null;
+  const capexEfficiency = operatingCashFlow && capex ? toPercent(Math.abs(capex) / Math.abs(operatingCashFlow)) : null;
 
-  const earningsHistory = (income || []).slice(0, 10);
-  const yearsAvailable = earningsHistory.length;
-  const profitableYears = earningsHistory.filter((row) => toNumber(row.netIncome) > 0).length;
+  const yearsAvailable = netIncomeSeries.length;
+  const profitableYears = netIncomeSeries.filter((row) => toNumber(row.val) > 0).length;
 
-  const freeCashFlow = operatingCashFlow !== null && capex !== null ? operatingCashFlow - capex : null;
+  const freeCashFlow =
+    operatingCashFlow !== null && capex !== null
+      ? operatingCashFlow - Math.abs(capex)
+      : null;
 
   const workingCapital =
     currentAssets !== null && currentLiabilities !== null
       ? currentAssets - currentLiabilities
       : null;
+
+  const marketPrice = await fetchQuotePrice(ticker, env);
+  const marketCap = marketPrice !== null && shares ? marketPrice * shares : null;
 
   const altmanZ = computeAltmanZ({
     workingCapital,
@@ -198,57 +235,57 @@ async function fetchStockData(ticker, env) {
 
   const shareholderYield =
     marketCap && (dividendsPaid || shareRepurchases)
-      ? toPercent((dividendsPaid + (shareRepurchases || 0)) / marketCap)
+      ? toPercent((Math.abs(dividendsPaid || 0) + Math.abs(shareRepurchases || 0)) / marketCap)
       : null;
 
   const dcfLow = computeDCF({
     freeCashFlow,
-    sharesOutstanding,
+    sharesOutstanding: shares,
     growthRate: 0.02,
     discountRate: 0.12,
     terminalGrowth: 0.02,
   });
   const dcfBase = computeDCF({
     freeCashFlow,
-    sharesOutstanding,
+    sharesOutstanding: shares,
     growthRate: 0.05,
     discountRate: 0.1,
     terminalGrowth: 0.02,
   });
   const dcfHigh = computeDCF({
     freeCashFlow,
-    sharesOutstanding,
+    sharesOutstanding: shares,
     growthRate: 0.08,
     discountRate: 0.08,
     terminalGrowth: 0.025,
   });
 
   let growthRate = null;
-  if (earningsHistory.length >= 2) {
-    const start = toNumber(earningsHistory[earningsHistory.length - 1].netIncome);
-    const end = toNumber(earningsHistory[0].netIncome);
+  if (netIncomeSeries.length >= 2) {
+    const start = toNumber(netIncomeSeries[netIncomeSeries.length - 1].val);
+    const end = toNumber(netIncomeSeries[0].val);
     if (start && end && start > 0) {
-      const years = earningsHistory.length - 1;
+      const years = netIncomeSeries.length - 1;
       growthRate = Math.pow(end / start, 1 / years) - 1;
     }
   }
 
-  const eps = netIncome && sharesOutstanding ? netIncome / sharesOutstanding : null;
+  const eps = netIncome && shares ? netIncome / shares : null;
   const graham = eps ? eps * (8.5 + 2 * ((growthRate ?? 0.05) * 100)) : null;
   const lynch = eps && growthRate ? eps * (growthRate * 100) : null;
 
   const impliedGrowth = impliedGrowthRate({
     freeCashFlow,
-    sharesOutstanding,
-    price,
+    sharesOutstanding: shares,
+    price: marketPrice,
     discountRate: 0.1,
     terminalGrowth: 0.02,
   });
 
   return {
     ticker,
-    name: company.companyName || ticker,
-    price,
+    name: facts?.entityName || ticker,
+    price: marketPrice,
     lastUpdated: todayKey(),
     metrics: {
       grossMargin,
@@ -277,26 +314,122 @@ async function fetchStockData(ticker, env) {
       graham,
       lynch,
       impliedGrowth,
-      current: price,
+      current: marketPrice,
     },
   };
 }
 
-async function fmpFetch(path, params, env) {
-  const key = env.FMP_API_KEY || "";
-  if (!key) {
-    throw new Error("FMP API key missing. Set FMP_API_KEY in Worker secrets.");
+async function lookupCik(ticker, env) {
+  const map = await getTickerMap(env);
+  if (!map) return null;
+
+  const raw = ticker.toUpperCase();
+  const direct = map[raw];
+  if (direct) return padCik(direct);
+
+  const alt = raw.includes(".") ? raw.replace(".", "-") : raw.replace("-", ".");
+  const altCik = map[alt];
+  if (altCik) return padCik(altCik);
+
+  return null;
+}
+
+async function getTickerMap(env) {
+  const cached = await getCache(env, "sec:tickers", true);
+  if (cached) return cached;
+
+  const data = await secFetchJson(SEC_TICKER_URL, env);
+  const map = {};
+  for (const key of Object.keys(data || {})) {
+    const row = data[key];
+    if (row && row.ticker && row.cik_str) {
+      map[String(row.ticker).toUpperCase()] = row.cik_str;
+    }
   }
+  await putCache(env, "sec:tickers", map);
+  return map;
+}
 
-  const url = new URL(`https://financialmodelingprep.com/api/v3${path}`);
-  url.search = new URLSearchParams({ apikey: key, ...params }).toString();
-
-  const res = await fetch(url.toString());
+async function secFetchJson(url, env) {
+  const userAgent =
+    env.SEC_USER_AGENT || "ValueCheck/1.0 (contact: support@valuecheck.local)";
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent": userAgent,
+      "Accept-Encoding": "gzip, deflate",
+    },
+  });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`FMP error ${res.status}: ${text}`);
+    throw new Error(`SEC error ${res.status}: ${text}`);
   }
   return res.json();
+}
+
+async function fetchQuotePrice(ticker, env) {
+  const key = env.FMP_API_KEY || "";
+  if (!key) return null;
+
+  const url = new URL(FMP_QUOTE_URL);
+  url.search = new URLSearchParams({ symbol: ticker, apikey: key }).toString();
+
+  const res = await fetch(url.toString());
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (!Array.isArray(data) || !data.length) return null;
+  const quote = data[0];
+  if (quote && typeof quote.price === "number") return quote.price;
+  return null;
+}
+
+function getAnnualSeries(usGaap, tag, unit = "USD") {
+  const fact = usGaap?.[tag];
+  const items = fact?.units?.[unit] || [];
+  const annual = items.filter(
+    (item) =>
+      item.form &&
+      ANNUAL_FORMS.has(item.form) &&
+      (item.fp === "FY" || item.fp === "FYI" || !item.fp)
+  );
+
+  const byYear = new Map();
+  for (const item of annual) {
+    const year = item.fy || (item.end ? Number(item.end.slice(0, 4)) : null);
+    if (!year) continue;
+    const existing = byYear.get(year);
+    if (!existing || (item.end && existing.end && item.end > existing.end)) {
+      byYear.set(year, item);
+    } else if (!existing) {
+      byYear.set(year, item);
+    }
+  }
+
+  return Array.from(byYear.values()).sort((a, b) => (b.fy || 0) - (a.fy || 0));
+}
+
+function firstSeries(usGaap, tags, unit = "USD") {
+  for (const tag of tags) {
+    const series = getAnnualSeries(usGaap, tag, unit);
+    if (series.length) return series;
+  }
+  return [];
+}
+
+function getLatestFact(usGaap, tag, unit) {
+  const fact = usGaap?.[tag];
+  const items = fact?.units?.[unit] || [];
+  const filtered = items.filter((item) => item.end && item.form && ANNUAL_FORMS.has(item.form));
+  filtered.sort((a, b) => (a.end < b.end ? 1 : -1));
+  return filtered.length ? toNumber(filtered[0].val) : null;
+}
+
+function latestValue(series) {
+  if (!series || !series.length) return null;
+  return toNumber(series[0].val);
+}
+
+function padCik(value) {
+  return String(value).padStart(10, "0");
 }
 
 async function getCache(env, key, allowStale = false) {
@@ -346,6 +479,11 @@ function toPercent(value) {
 function toRatio(value) {
   if (value === null || value === undefined || Number.isNaN(value)) return null;
   return Number(value.toFixed(2));
+}
+
+function sumNumbers(a, b) {
+  if (a === null && b === null) return null;
+  return (a || 0) + (b || 0);
 }
 
 function computeAltmanZ({

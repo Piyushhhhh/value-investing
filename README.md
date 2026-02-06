@@ -12,18 +12,20 @@ Open `index.html` directly or serve the folder with a static server.
 ## Configure API
 ## Cloudflare Worker (Free Plan)
 Use the Worker in `worker/` as the backend (no Firebase Functions required).
+Fundamentals come from the SEC XBRL API. The quote (price) comes from FMP’s
+stable `/quote` endpoint.
 
 ### Setup
 1. Install Wrangler: `npm install -g wrangler`
 2. Create a KV namespace:
    - `wrangler kv namespace create CACHE_KV`
 3. Update `worker/wrangler.toml` with the KV `id`
-4. Set the FMP key as a secret:
+4. Set the FMP key as a secret (used for quotes only):
    - `wrangler secret put FMP_API_KEY`
 5. Deploy:
    - `wrangler deploy worker/worker.js`
 
-Note: The Worker uses FMP legacy v3 endpoints for maximum free-plan compatibility.
+6. Update `SEC_USER_AGENT` in `worker/wrangler.toml` with your contact email.
 
 ### Frontend config
 The current Worker URL is:
