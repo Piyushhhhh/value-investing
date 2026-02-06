@@ -1,0 +1,10 @@
+name = "value-check"
+main = "worker.js"
+compatibility_date = "2024-12-01"
+
+[[kv_namespaces]]
+binding = "CACHE_KV"
+id = "99441bb3257c43f9bbfb04560c94ad94"
+
+[vars]
+DAILY_NEW_TICKER_CAP = "25"

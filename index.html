@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Value Check</title>
+    <meta name="description" content="Transparent value investing checks with daily-refreshed data." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="backdrop"></div>
+    <header class="site-header">
+      <div class="brand">
+        <span class="mark"></span>
+        <span class="word">Value Check</span>
+      </div>
+      <nav class="nav">
+        <a href="#/analyzer/BRK.B">Analyzer</a>
+        <a href="#/methodology">Methodology</a>
+        <a href="#/support">Support</a>
+      </nav>
+      <div class="cta">
+        <button class="ghost" id="nav-search">Check a Stock</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section id="route-home" class="route is-active" data-route="home">
+        <div class="hero">
+          <div class="hero-text">
+            <p class="eyebrow">Daily-refreshed, transparent value checks</p>
+            <h1>Know what a stock is worth before you buy.</h1>
+            <p class="lead">
+              A single-stock workflow that surfaces assumptions, calculates intrinsic value ranges, and
+              makes uncertainty explicit.
+            </p>
+            <div class="search">
+              <input id="ticker-input" placeholder="Enter ticker (e.g., BRK.B)" />
+              <button id="ticker-go">Analyze</button>
+            </div>
+            <div class="status">US stocks only · Daily refresh · No login required</div>
+          </div>
+          <div class="hero-card">
+            <div class="hero-card__label">Value Check Final Score</div>
+            <div class="hero-card__score" id="hero-score">7/10</div>
+            <div class="hero-card__meta">Sample: BRK.B · Mixed</div>
+            <div class="hero-card__grid">
+              <div>
+                <span>Margin of Safety</span>
+                <strong id="hero-mos">+8%</strong>
+              </div>
+              <div>
+                <span>Solvency</span>
+                <strong id="hero-solvency">Safe</strong>
+              </div>
+              <div>
+                <span>Shareholder Yield</span>
+                <strong id="hero-yield">9.8%</strong>
+              </div>
+              <div>
+                <span>Last Updated</span>
+                <strong id="hero-updated">Daily</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="trending">
+          <div class="section-head">
+            <h2>Trending</h2>
+            <span>Pre-cached daily</span>
+          </div>
+          <div id="trending-list" class="ticker-grid"></div>
+        </div>
+      </section>
+
+      <section id="route-analyzer" class="route" data-route="analyzer">
+        <div class="page-head">
+          <div>
+            <h2 id="analyzer-title">Analyzer</h2>
+            <p class="muted">Last updated: <span id="analyzer-updated">—</span></p>
+          </div>
+          <div class="score-card">
+            <div class="label">Value Check Final Score</div>
+            <div class="score" id="final-score">—</div>
+            <div class="verdict" id="final-verdict">—</div>
+          </div>
+        </div>
+
+        <div class="grid two">
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Checklist</h3>
+              <span class="muted">10 signals · pass/fail</span>
+            </div>
+            <div id="checklist-table" class="table"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Snapshots</h3>
+              <span class="muted">Quick readouts</span>
+            </div>
+            <div class="snapshot-grid" id="snapshot-grid"></div>
+            <button class="primary" id="to-valuation">View Fair Value</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="route-valuation" class="route" data-route="valuation">
+        <div class="page-head">
+          <div>
+            <h2 id="valuation-title">Fair Value Analysis</h2>
+            <p class="muted">Comparing intrinsic value models vs. market price.</p>
+          </div>
+          <div class="value-pill" id="mos-pill">—</div>
+        </div>
+
+        <div class="grid two">
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Valuation Range</h3>
+              <span class="muted">DCF · Graham · Lynch</span>
+            </div>
+            <div id="valuation-bars" class="bars"></div>
+            <div class="muted" id="implied-growth">—</div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Verdict</h3>
+              <span class="muted">Market expectations vs. intrinsic value</span>
+            </div>
+            <div class="verdict-block" id="valuation-verdict">—</div>
+            <button class="primary" id="to-memo">Generate Memo</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="route-memo" class="route" data-route="memo">
+        <div class="page-head">
+          <div>
+            <h2 id="memo-title">Investment Memo</h2>
+            <p class="muted">Generated summary. Edit as needed.</p>
+          </div>
+          <button class="ghost" id="to-snapshot">Create Snapshot</button>
+        </div>
+        <div class="panel">
+          <textarea id="memo-text" rows="16"></textarea>
+          <div class="disclaimer">This analysis is generated by AI and is not financial advice.</div>
+        </div>
+      </section>
+
+      <section id="route-snapshot" class="route" data-route="snapshot">
+        <div class="page-head">
+          <div>
+            <h2 id="snapshot-title">Snapshot</h2>
+            <p class="muted">Read-only summary for sharing.</p>
+          </div>
+          <button class="ghost" id="copy-link">Copy Link</button>
+        </div>
+        <div class="panel" id="snapshot-content"></div>
+      </section>
+
+      <section id="route-methodology" class="route" data-route="methodology">
+        <div class="page-head">
+          <div>
+            <h2>Methodology</h2>
+            <p class="muted">Definitions, thresholds, and data cadence.</p>
+          </div>
+        </div>
+        <div class="grid two">
+          <div class="panel">
+            <h3>Checklist Signals</h3>
+            <ul class="plain">
+              <li>Gross Margin > 40%</li>
+              <li>SG&A Efficiency < 30%</li>
+              <li>R&D Reliance < 30%</li>
+              <li>Net Margin > 20%</li>
+              <li>Consistent Earnings: profitability in last 5–10 years (based on available data)</li>
+              <li>Interest Coverage > 6x</li>
+              <li>Debt / Equity < 0.5</li>
+              <li>ROE > 15%</li>
+              <li>Capex Efficiency < 50%</li>
+              <li>$1 Test > 1.0</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>Data Cadence</h3>
+            <p>Data is refreshed daily and cached for 24 hours. US stocks only.</p>
+            <p>Intrinsic value ranges use conservative, base, and optimistic assumptions.</p>
+            <p>All outputs are educational and not investment advice.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="route-support" class="route" data-route="support">
+        <div class="page-head">
+          <div>
+            <h2>Support</h2>
+            <p class="muted">Questions, feedback, and disclaimers.</p>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>FAQ</h3>
+          <p><strong>Is this financial advice?</strong> No. This app is for educational use only.</p>
+          <p><strong>Why is data not real-time?</strong> We use free-tier data and refresh daily.</p>
+          <p><strong>Can I save my notes?</strong> Not in MVP. Snapshots are shareable and read-only.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div>Value Check · Data refreshed daily</div>
+      <div>Not financial advice</div>
+    </footer>
+
+    <script>
+      window.VALUE_CHECK_API_BASE = "https://value-check.value-check.workers.dev";
+    </script>
+    <script src="app.js"></script>
+  </body>
+</html>
