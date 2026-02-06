@@ -28,6 +28,10 @@ const TRENDING = [
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders() });
+    }
+
     if (url.pathname === "/trending") {
       return handleTrending(env);
     }
@@ -37,7 +41,7 @@ export default {
       return handleStock(ticker, env);
     }
 
-    return new Response("Not found", { status: 404 });
+    return new Response("Not found", { status: 404, headers: corsHeaders() });
   },
 };
 
@@ -47,9 +51,18 @@ function jsonResponse(payload, status = 200, extraHeaders = {}) {
     headers: {
       "content-type": "application/json",
       "cache-control": "public, max-age=300",
+      ...corsHeaders(),
       ...extraHeaders,
     },
   });
+}
+
+function corsHeaders() {
+  return {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET,OPTIONS",
+    "access-control-allow-headers": "content-type",
+  };
 }
 
 async function handleTrending(env) {
