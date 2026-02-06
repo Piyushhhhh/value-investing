@@ -351,6 +351,8 @@ async function fetchStockData(ticker, env) {
     ticker: resolvedTicker,
     name: facts?.entityName || resolvedTicker,
     price: marketPrice,
+    sharesOutstanding: shares || null,
+    marketCap,
     lastUpdated: todayKey(),
     metrics: {
       grossMargin,
@@ -369,6 +371,8 @@ async function fetchStockData(ticker, env) {
       shareholderYield,
       solvency: solvencyLabel(altmanZ),
       altmanZ,
+      freeCashFlow,
+      marketCap,
     },
     valuation: {
       dcf: {

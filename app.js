@@ -28,6 +28,26 @@ function formatValue(value, suffix = "") {
   return `${value}${suffix}`;
 }
 
+function formatCurrency(value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  const abs = Math.abs(value);
+  if (abs >= 1e12) return `$${(value / 1e12).toFixed(2)}T`;
+  if (abs >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
+  if (abs >= 1e3) return `$${(value / 1e3).toFixed(2)}K`;
+  return `$${value.toFixed(2)}`;
+}
+
+function formatNumber(value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  const abs = Math.abs(value);
+  if (abs >= 1e12) return `${(value / 1e12).toFixed(2)}T`;
+  if (abs >= 1e9) return `${(value / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `${(value / 1e6).toFixed(2)}M`;
+  if (abs >= 1e3) return `${(value / 1e3).toFixed(2)}K`;
+  return `${value.toFixed(2)}`;
+}
+
 function emptyData(ticker = "") {
   return {
     ticker,
@@ -318,8 +338,16 @@ function renderHomeHero(data) {
 }
 
 function renderAnalyzer(data) {
-  $("analyzer-title").textContent = `${data.ticker} · Analyzer`;
-  $("analyzer-updated").textContent = data.lastUpdated;
+  const name = data.name ? `${data.name} (${data.ticker})` : data.ticker || "Analyzer";
+  $("analyzer-title").textContent = `${name} · Analyzer`;
+  const metaParts = [
+    `Last updated: ${data.lastUpdated}`,
+    data.price !== null && data.price !== undefined ? `Price: ${formatCurrency(data.price)}` : null,
+    data.marketCap !== null && data.marketCap !== undefined
+      ? `Market Cap: ${formatCurrency(data.marketCap)}`
+      : null,
+  ].filter(Boolean);
+  $("analyzer-meta").textContent = metaParts.join(" · ");
 
   const { score, verdict, checks } = scoreChecklist(data.metrics);
   $("final-score").textContent = score === null ? "—" : `${score}/10`;
@@ -348,16 +376,19 @@ function renderAnalyzer(data) {
   const snapshot = $("snapshot-grid");
   snapshot.innerHTML = "";
   const items = [
+    { label: "Price", value: formatCurrency(data.price) },
+    { label: "Market Cap", value: formatCurrency(data.marketCap) },
     {
       label: "Shareholder Yield",
       value:
         data.snapshots.shareholderYield === null
-          ? "—"
+          ? "Not available"
           : `${data.snapshots.shareholderYield}% returned`,
     },
-    { label: "Solvency", value: data.snapshots.solvency },
-    { label: "Altman Z-Score", value: data.snapshots.altmanZ ?? "—" },
-    { label: "Debt/Equity", value: data.metrics.debtToEquity ?? "—" },
+    {
+      label: "Altman Z-Score",
+      value: data.snapshots.altmanZ ?? "Not available",
+    },
   ];
 
   items.forEach((item) => {

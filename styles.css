@@ -376,6 +376,13 @@ button:hover {
   background: var(--sand);
   border-radius: 18px;
   padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.snapshot-card strong {
+  font-size: 1.05rem;
 }
 
 .bars {
