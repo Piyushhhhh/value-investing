@@ -92,6 +92,12 @@ function renderError(message) {
   }
 }
 
+function updateNavLinks() {
+  const navAnalyzer = $("nav-analyzer");
+  if (!navAnalyzer) return;
+  navAnalyzer.href = state.ticker ? `#/analyzer/${encodeURIComponent(state.ticker)}` : "#/analyzer";
+}
+
 function setActiveRoute(route) {
   routes.forEach((name) => {
     const section = document.querySelector(`[data-route="${name}"]`);
@@ -413,6 +419,21 @@ async function loadTicker(ticker) {
 
 async function render() {
   const { route, ticker } = parseHash();
+  const needsTicker = ["analyzer", "valuation", "memo", "snapshot"].includes(route);
+
+  if (needsTicker && !ticker && state.ticker) {
+    goTo(route, state.ticker);
+    return;
+  }
+
+  if (needsTicker && !ticker && !state.ticker) {
+    state.error = "Enter a ticker to analyze.";
+    setActiveRoute("home");
+    renderError(state.error);
+    renderHomeHero(state.data);
+    return;
+  }
+
   if (ticker) {
     await loadTicker(ticker);
   }
@@ -440,6 +461,19 @@ function init() {
     document.getElementById("ticker-input").focus();
     goTo("home");
   });
+
+  const navAnalyzer = $("nav-analyzer");
+  if (navAnalyzer) {
+    navAnalyzer.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (state.ticker) {
+        goTo("analyzer", state.ticker);
+      } else {
+        state.error = "Enter a ticker to analyze.";
+        goTo("home");
+      }
+    });
+  }
 
   window.addEventListener("hashchange", render);
   render();
