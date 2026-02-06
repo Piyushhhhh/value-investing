@@ -2,6 +2,10 @@
 
 Static MVP for a value-investing web app. Designed for GitHub Pages and free-tier data constraints.
 
+## Live
+Check it here:
+- https://piyushhhhh.github.io/value-investing/
+
 ## Run locally
 Open `index.html` directly or serve the folder with a static server.
 
