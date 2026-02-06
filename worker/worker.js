@@ -42,6 +42,11 @@ export default {
       return handleTrending(env);
     }
 
+    if (url.pathname === "/search") {
+      const query = url.searchParams.get("q") || "";
+      return handleSearch(query, env);
+    }
+
     if (url.pathname.startsWith("/stock/")) {
       const ticker = url.pathname.replace("/stock/", "").trim();
       return handleStock(ticker, env);
@@ -107,6 +112,42 @@ async function handleStock(rawTicker, env) {
     }
     return jsonResponse({ error: err.message || "Unable to fetch data" }, 500);
   }
+}
+
+async function handleSearch(rawQuery, env) {
+  const query = rawQuery.trim().toLowerCase();
+  if (query.length < 2) {
+    return jsonResponse({ query, results: [] });
+  }
+
+  const index = await getTickerIndex(env);
+  const results = [];
+
+  for (const item of index.list) {
+    const ticker = item.ticker;
+    const title = item.title || "";
+    const tickerLower = ticker.toLowerCase();
+    const titleLower = title.toLowerCase();
+    let score = 0;
+
+    if (tickerLower === query) score = 100;
+    else if (tickerLower.startsWith(query)) score = 80;
+    else if (titleLower.startsWith(query)) score = 60;
+    else if (titleLower.includes(` ${query}`)) score = 40;
+    else if (titleLower.includes(query)) score = 20;
+
+    if (score > 0) {
+      results.push({ ...item, score });
+    }
+    if (results.length > 200) break;
+  }
+
+  results.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return (a.title || "").length - (b.title || "").length;
+  });
+
+  return jsonResponse({ query, results: results.slice(0, 10) });
 }
 
 async function fetchStockData(ticker, env) {
@@ -320,8 +361,8 @@ async function fetchStockData(ticker, env) {
 }
 
 async function lookupCik(ticker, env) {
-  const map = await getTickerMap(env);
-  if (!map) return null;
+  const index = await getTickerIndex(env);
+  const map = index.map;
 
   const raw = ticker.toUpperCase();
   const direct = map[raw];
@@ -334,20 +375,29 @@ async function lookupCik(ticker, env) {
   return null;
 }
 
-async function getTickerMap(env) {
-  const cached = await getCache(env, "sec:tickers", true);
+async function getTickerIndex(env) {
+  const cached = await getCache(env, "sec:tickers:index", true);
   if (cached) return cached;
 
   const data = await secFetchJson(SEC_TICKER_URL, env);
   const map = {};
+  const list = [];
   for (const key of Object.keys(data || {})) {
     const row = data[key];
     if (row && row.ticker && row.cik_str) {
-      map[String(row.ticker).toUpperCase()] = row.cik_str;
+      const ticker = String(row.ticker).toUpperCase();
+      map[ticker] = row.cik_str;
+      list.push({
+        ticker,
+        title: row.title || "",
+        cik: row.cik_str,
+      });
     }
   }
-  await putCache(env, "sec:tickers", map);
-  return map;
+
+  const payload = { map, list };
+  await putCache(env, "sec:tickers:index", payload);
+  return payload;
 }
 
 async function secFetchJson(url, env) {

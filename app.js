@@ -80,6 +80,19 @@ const state = {
 
 const $ = (id) => document.getElementById(id);
 
+const suggestionsState = {
+  items: [],
+  open: false,
+};
+
+function debounce(fn, wait = 250) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), wait);
+  };
+}
+
 function renderError(message) {
   const banner = $("error-banner");
   if (!banner) return;
@@ -96,6 +109,52 @@ function updateNavLinks() {
   const navAnalyzer = $("nav-analyzer");
   if (!navAnalyzer) return;
   navAnalyzer.href = state.ticker ? `#/analyzer/${encodeURIComponent(state.ticker)}` : "#/analyzer";
+}
+
+async function fetchSuggestions(query) {
+  if (!API_BASE) return [];
+  try {
+    const res = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data.results) ? data.results : [];
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+}
+
+function renderSuggestions(list) {
+  const container = $("search-suggestions");
+  if (!container) return;
+  container.innerHTML = "";
+  suggestionsState.items = list;
+  suggestionsState.open = list.length > 0;
+  container.classList.toggle("is-active", list.length > 0);
+
+  list.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "suggestion-item";
+    row.innerHTML = `
+      <span class="suggestion-ticker">${item.ticker}</span>
+      <span class="suggestion-title">${item.title || ""}</span>
+    `;
+    row.addEventListener("click", () => {
+      const input = $("ticker-input");
+      if (input) input.value = item.ticker;
+      container.classList.remove("is-active");
+      suggestionsState.open = false;
+      goTo("analyzer", item.ticker);
+    });
+    container.appendChild(row);
+  });
+}
+
+function closeSuggestions() {
+  const container = $("search-suggestions");
+  if (!container) return;
+  container.classList.remove("is-active");
+  suggestionsState.open = false;
 }
 
 function setActiveRoute(route) {
@@ -451,11 +510,55 @@ function init() {
   renderTrending();
   renderHomeHero(state.data);
 
-  $("ticker-go").addEventListener("click", () => {
-    const value = $("ticker-input").value.trim().toUpperCase();
-    if (!value) return;
-    goTo("analyzer", value);
-  });
+  const tickerInput = $("ticker-input");
+  const tickerGo = $("ticker-go");
+
+  const debouncedSuggest = debounce(async (value) => {
+    const list = await fetchSuggestions(value);
+    renderSuggestions(list);
+  }, 300);
+
+  if (tickerInput) {
+    tickerInput.addEventListener("input", () => {
+      const value = tickerInput.value.trim();
+      if (value.length < 2) {
+        renderSuggestions([]);
+        return;
+      }
+      debouncedSuggest(value);
+    });
+
+    tickerInput.addEventListener("focus", () => {
+      if (suggestionsState.items.length) {
+        renderSuggestions(suggestionsState.items);
+      }
+    });
+
+    tickerInput.addEventListener("blur", () => {
+      setTimeout(closeSuggestions, 150);
+    });
+
+    tickerInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        const value = tickerInput.value.trim().toUpperCase();
+        const picked = suggestionsState.items.length ? suggestionsState.items[0].ticker : value;
+        if (!picked) return;
+        closeSuggestions();
+        goTo("analyzer", picked);
+      }
+    });
+  }
+
+  if (tickerGo) {
+    tickerGo.addEventListener("click", () => {
+      const value = tickerInput?.value.trim().toUpperCase() || "";
+      const picked = suggestionsState.items.length ? suggestionsState.items[0].ticker : value;
+      if (!picked) return;
+      closeSuggestions();
+      goTo("analyzer", picked);
+    });
+  }
 
   $("nav-search").addEventListener("click", () => {
     document.getElementById("ticker-input").focus();

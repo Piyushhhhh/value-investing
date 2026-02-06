@@ -127,6 +127,7 @@ a {
   display: flex;
   gap: 0.8rem;
   margin-top: 1.5rem;
+  position: relative;
 }
 
 .search input {
@@ -136,6 +137,54 @@ a {
   border: 1px solid var(--stroke);
   font-size: 1rem;
   background: white;
+}
+
+.suggestions {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 16px;
+  border: 1px solid var(--stroke);
+  box-shadow: var(--shadow);
+  display: none;
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 6;
+}
+
+.suggestions.is-active {
+  display: block;
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--stroke);
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover {
+  background: rgba(255, 122, 24, 0.12);
+}
+
+.suggestion-ticker {
+  font-weight: 600;
+  min-width: 70px;
+}
+
+.suggestion-title {
+  color: var(--muted);
+  font-size: 0.9rem;
+  flex: 1;
 }
 
 button {
