@@ -471,8 +471,44 @@ textarea {
   display: block;
 }
 
+.loading-overlay {
+  display: none;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.85rem 1.2rem;
+  border-radius: 14px;
+  border: 1px solid rgba(29, 159, 165, 0.35);
+  background: rgba(29, 159, 165, 0.1);
+  color: #0d5e63;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.loading-overlay.is-active {
+  display: flex;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 3px solid rgba(29, 159, 165, 0.2);
+  border-top-color: var(--accent-2);
+  animation: spin 0.9s linear infinite;
+}
+
+.loading-text {
+  letter-spacing: 0.01em;
+}
+
 .muted {
   color: var(--muted);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fadeIn {

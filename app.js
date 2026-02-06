@@ -96,6 +96,7 @@ const state = {
   ticker: "",
   data: emptyData(""),
   error: null,
+  loading: false,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -123,6 +124,13 @@ function renderError(message) {
     banner.textContent = "";
     banner.classList.remove("is-active");
   }
+}
+
+function setLoading(isLoading) {
+  state.loading = isLoading;
+  const overlay = $("loading-overlay");
+  if (!overlay) return;
+  overlay.classList.toggle("is-active", isLoading);
 }
 
 function updateNavLinks() {
@@ -508,6 +516,7 @@ async function fetchStock(ticker) {
 }
 
 async function loadTicker(ticker) {
+  setLoading(true);
   try {
     const data = await fetchStock(ticker);
     state.ticker = ticker;
@@ -517,6 +526,8 @@ async function loadTicker(ticker) {
     console.error(err);
     state.data = emptyData(ticker);
     state.error = "Data unavailable. Try again later.";
+  } finally {
+    setLoading(false);
   }
 }
 
@@ -543,6 +554,7 @@ async function render() {
 
   setActiveRoute(route);
   renderError(state.error);
+  setLoading(state.loading);
   renderHomeHero(state.data);
   if (route === "analyzer") renderAnalyzer(state.data);
   if (route === "valuation") renderValuation(state.data);

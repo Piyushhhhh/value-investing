@@ -182,6 +182,7 @@ async function fetchStockData(ticker, env) {
 
   const facts = await secFetchJson(`${SEC_FACTS_BASE}/CIK${cik}.json`, env);
   const usGaap = facts?.facts?.["us-gaap"] || {};
+  const dei = facts?.facts?.dei || {};
 
   const revenueSeries = firstSeries(usGaap, [
     "Revenues",
@@ -227,6 +228,8 @@ async function fetchStockData(ticker, env) {
   );
   const capexSeries = firstSeries(usGaap, [
     "PaymentsToAcquirePropertyPlantAndEquipment",
+    "PaymentsToAcquirePropertyPlantAndEquipmentNet",
+    "PaymentsToAcquireProductiveAssets",
     "CapitalExpenditures",
   ]);
   const dividendsSeries = firstSeries(usGaap, [
@@ -238,7 +241,9 @@ async function fetchStockData(ticker, env) {
     "PaymentsForRepurchaseOfCommonStock",
   ]);
 
-  const shares = getLatestFact(usGaap, "EntityCommonStockSharesOutstanding", "shares");
+  let shares =
+    getLatestFact(dei, "EntityCommonStockSharesOutstanding", "shares") ||
+    getLatestFact(usGaap, "EntityCommonStockSharesOutstanding", "shares");
 
   const revenue = latestValue(revenueSeries);
   const grossProfit = latestValue(grossProfitSeries);
@@ -285,8 +290,16 @@ async function fetchStockData(ticker, env) {
       ? currentAssets - currentLiabilities
       : null;
 
-  const marketPrice = await fetchQuotePrice(resolvedTicker, env);
-  const marketCap = marketPrice !== null && shares ? marketPrice * shares : null;
+  const quote = await fetchQuote(resolvedTicker, env);
+  const marketPrice = quote?.price ?? null;
+  if (!shares && quote?.sharesOutstanding) {
+    shares = quote.sharesOutstanding;
+  }
+  if (!shares && marketPrice && quote?.marketCap) {
+    shares = quote.marketCap / marketPrice;
+  }
+  const marketCap =
+    quote?.marketCap ?? (marketPrice !== null && shares ? marketPrice * shares : null);
 
   const altmanZ = computeAltmanZ({
     workingCapital,
@@ -444,20 +457,40 @@ async function secFetchJson(url, env) {
   return res.json();
 }
 
-async function fetchQuotePrice(ticker, env) {
+async function fetchQuote(symbol, env) {
   const key = env.FMP_API_KEY || "";
   if (!key) return null;
 
-  const url = new URL(FMP_QUOTE_URL);
-  url.search = new URLSearchParams({ symbol: ticker, apikey: key }).toString();
+  const primary = await fetchQuoteData(symbol, key);
+  if (primary) return primary;
 
+  if (symbol.includes(".")) {
+    const alt = symbol.replace(".", "-");
+    return fetchQuoteData(alt, key);
+  }
+
+  if (symbol.includes("-")) {
+    const alt = symbol.replace("-", ".");
+    return fetchQuoteData(alt, key);
+  }
+
+  return null;
+}
+
+async function fetchQuoteData(symbol, key) {
+  const url = new URL(FMP_QUOTE_URL);
+  url.search = new URLSearchParams({ symbol, apikey: key }).toString();
   const res = await fetch(url.toString());
   if (!res.ok) return null;
   const data = await res.json();
   if (!Array.isArray(data) || !data.length) return null;
-  const quote = data[0];
-  if (quote && typeof quote.price === "number") return quote.price;
-  return null;
+  const quote = data[0] || {};
+  return {
+    price: typeof quote.price === "number" ? quote.price : null,
+    marketCap: typeof quote.marketCap === "number" ? quote.marketCap : null,
+    sharesOutstanding:
+      typeof quote.sharesOutstanding === "number" ? quote.sharesOutstanding : null,
+  };
 }
 
 function getAnnualSeries(usGaap, tag, unit = "USD") {
