@@ -167,13 +167,17 @@ function renderSuggestions(list) {
       <span class="suggestion-ticker">${item.ticker}</span>
       <span class="suggestion-title">${item.title || ""}</span>
     `;
-    row.addEventListener("click", () => {
+    const onSelect = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       const input = $("ticker-input");
       if (input) input.value = item.ticker;
       container.classList.remove("is-active");
       suggestionsState.open = false;
       goTo("analyzer", item.ticker);
-    });
+    };
+    row.addEventListener("pointerdown", onSelect);
+    row.addEventListener("click", onSelect);
     container.appendChild(row);
   });
 }
@@ -516,7 +520,6 @@ async function fetchStock(ticker) {
 }
 
 async function loadTicker(ticker) {
-  setLoading(true);
   try {
     const data = await fetchStock(ticker);
     state.ticker = ticker;
@@ -526,8 +529,6 @@ async function loadTicker(ticker) {
     console.error(err);
     state.data = emptyData(ticker);
     state.error = "Data unavailable. Try again later.";
-  } finally {
-    setLoading(false);
   }
 }
 
@@ -549,12 +550,16 @@ async function render() {
   }
 
   if (ticker) {
+    setLoading(true);
+    setActiveRoute(route);
+    renderError(null);
+    renderHomeHero(state.data);
     await loadTicker(ticker);
+    setLoading(false);
   }
 
   setActiveRoute(route);
   renderError(state.error);
-  setLoading(state.loading);
   renderHomeHero(state.data);
   if (route === "analyzer") renderAnalyzer(state.data);
   if (route === "valuation") renderValuation(state.data);

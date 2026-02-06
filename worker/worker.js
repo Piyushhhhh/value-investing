@@ -190,12 +190,17 @@ async function fetchStockData(ticker, env) {
     "SalesRevenueNet",
   ]);
   const grossProfitSeries = getAnnualSeries(usGaap, "GrossProfit");
-  const netIncomeSeries = getAnnualSeries(usGaap, "NetIncomeLoss");
+  const netIncomeSeries = firstSeries(usGaap, [
+    "NetIncomeLoss",
+    "ProfitLoss",
+    "NetIncomeLossAvailableToCommonStockholdersBasic",
+  ]);
   const sgaSeries = getAnnualSeries(usGaap, "SellingGeneralAndAdministrativeExpense");
   const rdSeries = getAnnualSeries(usGaap, "ResearchAndDevelopmentExpense");
   const ebitSeries = firstSeries(usGaap, [
     "OperatingIncomeLoss",
     "EarningsBeforeInterestAndTaxes",
+    "OperatingIncomeLossContinuingOperations",
   ]);
   const interestSeries = firstSeries(usGaap, [
     "InterestExpense",
@@ -222,10 +227,10 @@ async function fetchStockData(ticker, env) {
     "LongTermDebtCurrent",
   ]);
 
-  const operatingCashFlowSeries = getAnnualSeries(
-    usGaap,
-    "NetCashProvidedByUsedInOperatingActivities"
-  );
+  const operatingCashFlowSeries = firstSeries(usGaap, [
+    "NetCashProvidedByUsedInOperatingActivities",
+    "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations",
+  ]);
   const capexSeries = firstSeries(usGaap, [
     "PaymentsToAcquirePropertyPlantAndEquipment",
     "PaymentsToAcquirePropertyPlantAndEquipmentNet",
@@ -243,7 +248,9 @@ async function fetchStockData(ticker, env) {
 
   let shares =
     getLatestFact(dei, "EntityCommonStockSharesOutstanding", "shares") ||
-    getLatestFact(usGaap, "EntityCommonStockSharesOutstanding", "shares");
+    getLatestFact(usGaap, "EntityCommonStockSharesOutstanding", "shares") ||
+    getLatestFact(usGaap, "WeightedAverageNumberOfDilutedSharesOutstanding", "shares") ||
+    getLatestFact(usGaap, "WeightedAverageNumberOfSharesOutstandingBasic", "shares");
 
   const revenue = latestValue(revenueSeries);
   const grossProfit = latestValue(grossProfitSeries);
