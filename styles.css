@@ -400,6 +400,21 @@ textarea {
   background: rgba(246, 242, 233, 0.9);
 }
 
+.error-banner {
+  display: none;
+  margin-bottom: 1.5rem;
+  padding: 0.9rem 1.2rem;
+  border-radius: 14px;
+  border: 1px solid rgba(204, 43, 43, 0.35);
+  background: rgba(204, 43, 43, 0.1);
+  color: #7b1a1a;
+  font-weight: 500;
+}
+
+.error-banner.is-active {
+  display: block;
+}
+
 .muted {
   color: var(--muted);
 }

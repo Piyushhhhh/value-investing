@@ -28,37 +28,39 @@ function formatValue(value, suffix = "") {
   return `${value}${suffix}`;
 }
 
-const MOCK = {
-  ticker: "BRK.B",
-  name: "Berkshire Hathaway",
-  price: 503.82,
-  lastUpdated: "Daily",
-  metrics: {
-    grossMargin: 23.3,
-    sgaEfficiency: 29.6,
-    rdReliance: 0.0,
-    netMargin: 24.0,
-    consistentEarnings: 9,
-    consistentEarningsYears: 10,
-    interestCoverage: 11.4,
-    debtToEquity: 0.22,
-    roe: 13.7,
-    capexEfficiency: 21.3,
-    dollarTest: 3.69,
-  },
-  snapshots: {
-    shareholderYield: 9.8,
-    solvency: "Safe",
-    altmanZ: 3.01,
-  },
-  valuation: {
-    dcf: { low: 320, base: 480, high: 640 },
-    graham: 520,
-    lynch: 619,
-    impliedGrowth: 28.0,
-    current: 503.82,
-  },
-};
+function emptyData(ticker = "") {
+  return {
+    ticker,
+    name: "",
+    price: null,
+    lastUpdated: "—",
+    metrics: {
+      grossMargin: null,
+      sgaEfficiency: null,
+      rdReliance: null,
+      netMargin: null,
+      consistentEarnings: null,
+      consistentEarningsYears: null,
+      interestCoverage: null,
+      debtToEquity: null,
+      roe: null,
+      capexEfficiency: null,
+      dollarTest: null,
+    },
+    snapshots: {
+      shareholderYield: null,
+      solvency: "Unknown",
+      altmanZ: null,
+    },
+    valuation: {
+      dcf: { low: null, base: null, high: null },
+      graham: null,
+      lynch: null,
+      impliedGrowth: null,
+      current: null,
+    },
+  };
+}
 
 const routes = [
   "home",
@@ -71,11 +73,24 @@ const routes = [
 ];
 
 const state = {
-  ticker: "BRK.B",
-  data: MOCK,
+  ticker: "",
+  data: emptyData(""),
+  error: null,
 };
 
 const $ = (id) => document.getElementById(id);
+
+function renderError(message) {
+  const banner = $("error-banner");
+  if (!banner) return;
+  if (message) {
+    banner.textContent = message;
+    banner.classList.add("is-active");
+  } else {
+    banner.textContent = "";
+    banner.classList.remove("is-active");
+  }
+}
 
 function setActiveRoute(route) {
   routes.forEach((name) => {
@@ -167,10 +182,11 @@ function scoreChecklist(metrics) {
     },
   ];
 
-  const score = checks.reduce((sum, c) => sum + (c.pass ? 1 : 0), 0);
-  let verdict = "Weak";
-  if (score >= 8) verdict = "Strong";
-  else if (score >= 5) verdict = "Mixed";
+  const hasData = checks.some((c) => c.value !== "—");
+  const score = hasData ? checks.reduce((sum, c) => sum + (c.pass ? 1 : 0), 0) : null;
+  let verdict = hasData ? "Weak" : "Unavailable";
+  if (score !== null && score >= 8) verdict = "Strong";
+  else if (score !== null && score >= 5) verdict = "Mixed";
 
   return { score, verdict, checks };
 }
@@ -209,7 +225,7 @@ async function renderTrending() {
 
 function renderHomeHero(data) {
   const { score, verdict } = scoreChecklist(data.metrics);
-  $("hero-score").textContent = `${score}/10`;
+  $("hero-score").textContent = score === null ? "—" : `${score}/10`;
   const mos = marginOfSafety(data.valuation);
   $("hero-mos").textContent = mos === null ? "—" : `${mos.toFixed(1)}%`;
   $("hero-solvency").textContent = data.snapshots.solvency;
@@ -218,7 +234,9 @@ function renderHomeHero(data) {
       ? "—"
       : `${data.snapshots.shareholderYield}%`;
   $("hero-updated").textContent = data.lastUpdated;
-  document.querySelector(".hero-card__meta").textContent = `Sample: ${data.ticker} · ${verdict}`;
+  document.querySelector(".hero-card__meta").textContent = data.ticker
+    ? `${data.ticker} · ${verdict}`
+    : "Run a check to see a score";
 }
 
 function renderAnalyzer(data) {
@@ -226,7 +244,7 @@ function renderAnalyzer(data) {
   $("analyzer-updated").textContent = data.lastUpdated;
 
   const { score, verdict, checks } = scoreChecklist(data.metrics);
-  $("final-score").textContent = `${score}/10`;
+  $("final-score").textContent = score === null ? "—" : `${score}/10`;
   $("final-verdict").textContent = verdict;
 
   const table = $("checklist-table");
@@ -322,10 +340,13 @@ function renderMemo(data) {
   $("memo-title").textContent = `${data.ticker} · Investment Memo`;
   const { score, verdict } = scoreChecklist(data.metrics);
   const mos = marginOfSafety(data.valuation);
+  const companyName = data.name || data.ticker || "this company";
 
   const memo = [
     `Executive Summary`,
-    `${data.name} (${data.ticker}) scores ${score}/10 on the Value Check. The score suggests a ${verdict.toLowerCase()} profile${mos === null ? "." : `, with a margin of safety around ${mos.toFixed(1)}%.`}`,
+    score === null
+      ? `Data is not available yet for ${companyName}. Try again later.`
+      : `${companyName} (${data.ticker}) scores ${score}/10 on the Value Check. The score suggests a ${verdict.toLowerCase()} profile${mos === null ? "." : `, with a margin of safety around ${mos.toFixed(1)}%.`}`,
     `Bull Case`,
     `- Strong shareholder yield (${data.snapshots.shareholderYield ?? "—"}%).`,
     `- Conservative leverage with debt/equity of ${data.metrics.debtToEquity ?? "—"}.`,
@@ -346,7 +367,7 @@ function renderSnapshot(data) {
 
   $("snapshot-content").innerHTML = `
     <h3>Value Check Final Score</h3>
-    <p><strong>${score}/10</strong> · ${verdict}</p>
+    <p><strong>${score === null ? "—" : `${score}/10`}</strong> · ${verdict}</p>
     <h3>Margin of Safety</h3>
     <p>${mos === null ? "—" : `${mos.toFixed(1)}%`}</p>
     <h3>Key Signals</h3>
@@ -367,10 +388,13 @@ function renderSnapshot(data) {
 }
 
 async function fetchStock(ticker) {
-  if (!API_BASE) return MOCK;
+  if (!API_BASE) throw new Error("API base not configured.");
 
   const response = await fetch(`${API_BASE}/stock/${ticker}`);
-  if (!response.ok) throw new Error("Unable to fetch data");
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(detail || "Unable to fetch data");
+  }
   return response.json();
 }
 
@@ -379,9 +403,11 @@ async function loadTicker(ticker) {
     const data = await fetchStock(ticker);
     state.ticker = ticker;
     state.data = data;
+    state.error = null;
   } catch (err) {
     console.error(err);
-    state.data = MOCK;
+    state.data = emptyData(ticker);
+    state.error = "Data unavailable. Try again later.";
   }
 }
 
@@ -392,6 +418,7 @@ async function render() {
   }
 
   setActiveRoute(route);
+  renderError(state.error);
   renderHomeHero(state.data);
   if (route === "analyzer") renderAnalyzer(state.data);
   if (route === "valuation") renderValuation(state.data);
