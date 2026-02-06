@@ -105,20 +105,20 @@ async function handleStock(rawTicker, env) {
 
 async function fetchStockData(ticker, env) {
   const normalized = ticker.includes(".") ? ticker.replace(".", "-") : ticker;
-  const profile = await fmpFetch("/profile", { symbol: normalized }, env);
+  const profile = await fmpFetch(`/profile/${normalized}`, {}, env);
   const income = await fmpFetch(
-    "/income-statement",
-    { symbol: normalized, period: "annual", limit: 10 },
+    `/income-statement/${normalized}`,
+    { period: "annual", limit: 10 },
     env
   );
   const balance = await fmpFetch(
-    "/balance-sheet-statement",
-    { symbol: normalized, period: "annual", limit: 10 },
+    `/balance-sheet-statement/${normalized}`,
+    { period: "annual", limit: 10 },
     env
   );
   const cashflow = await fmpFetch(
-    "/cash-flow-statement",
-    { symbol: normalized, period: "annual", limit: 10 },
+    `/cash-flow-statement/${normalized}`,
+    { period: "annual", limit: 10 },
     env
   );
 
@@ -288,7 +288,7 @@ async function fmpFetch(path, params, env) {
     throw new Error("FMP API key missing. Set FMP_API_KEY in Worker secrets.");
   }
 
-  const url = new URL(`https://financialmodelingprep.com/stable${path}`);
+  const url = new URL(`https://financialmodelingprep.com/api/v3${path}`);
   url.search = new URLSearchParams({ apikey: key, ...params }).toString();
 
   const res = await fetch(url.toString());

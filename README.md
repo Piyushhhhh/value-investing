@@ -23,6 +23,8 @@ Use the Worker in `worker/` as the backend (no Firebase Functions required).
 5. Deploy:
    - `wrangler deploy worker/worker.js`
 
+Note: The Worker uses FMP legacy v3 endpoints for maximum free-plan compatibility.
+
 ### Frontend config
 The current Worker URL is:
 `https://value-check.value-check.workers.dev`
