@@ -150,10 +150,34 @@ async function handleSearch(rawQuery, env) {
   return jsonResponse({ query, results: results.slice(0, 10) });
 }
 
+async function resolveTickerFromQuery(rawQuery, env) {
+  const query = rawQuery.trim().toLowerCase();
+  if (query.length < 2) return null;
+  const index = await getTickerIndex(env);
+  for (const item of index.list) {
+    const tickerLower = item.ticker.toLowerCase();
+    const titleLower = (item.title || "").toLowerCase();
+    if (tickerLower === query) return item.ticker;
+    if (tickerLower.startsWith(query)) return item.ticker;
+    if (titleLower.startsWith(query)) return item.ticker;
+    if (titleLower.includes(` ${query}`)) return item.ticker;
+    if (titleLower.includes(query)) return item.ticker;
+  }
+  return null;
+}
+
 async function fetchStockData(ticker, env) {
-  const cik = await lookupCik(ticker, env);
+  let resolvedTicker = ticker;
+  let cik = await lookupCik(resolvedTicker, env);
   if (!cik) {
-    throw new Error("CIK not found for ticker");
+    const fallback = await resolveTickerFromQuery(ticker, env);
+    if (fallback) {
+      resolvedTicker = fallback;
+      cik = await lookupCik(resolvedTicker, env);
+    }
+  }
+  if (!cik) {
+    throw new Error("CIK not found for ticker or company name");
   }
 
   const facts = await secFetchJson(`${SEC_FACTS_BASE}/CIK${cik}.json`, env);
@@ -261,7 +285,7 @@ async function fetchStockData(ticker, env) {
       ? currentAssets - currentLiabilities
       : null;
 
-  const marketPrice = await fetchQuotePrice(ticker, env);
+  const marketPrice = await fetchQuotePrice(resolvedTicker, env);
   const marketCap = marketPrice !== null && shares ? marketPrice * shares : null;
 
   const altmanZ = computeAltmanZ({
@@ -324,8 +348,8 @@ async function fetchStockData(ticker, env) {
   });
 
   return {
-    ticker,
-    name: facts?.entityName || ticker,
+    ticker: resolvedTicker,
+    name: facts?.entityName || resolvedTicker,
     price: marketPrice,
     lastUpdated: todayKey(),
     metrics: {
