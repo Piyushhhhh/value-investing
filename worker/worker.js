@@ -184,64 +184,64 @@ async function fetchStockData(ticker, env) {
   const usGaap = facts?.facts?.["us-gaap"] || {};
   const dei = facts?.facts?.dei || {};
 
-  const revenueSeries = firstSeries(usGaap, [
+  const revenueSel = selectSeries(usGaap, [
     "Revenues",
     "RevenueFromContractWithCustomerExcludingAssessedTax",
     "SalesRevenueNet",
   ]);
-  const grossProfitSeries = getAnnualSeries(usGaap, "GrossProfit");
-  const netIncomeSeries = firstSeries(usGaap, [
+  const grossProfitSel = selectSeries(usGaap, ["GrossProfit"]);
+  const netIncomeSel = selectSeries(usGaap, [
     "NetIncomeLoss",
     "ProfitLoss",
     "NetIncomeLossAvailableToCommonStockholdersBasic",
   ]);
-  const sgaSeries = getAnnualSeries(usGaap, "SellingGeneralAndAdministrativeExpense");
-  const rdSeries = getAnnualSeries(usGaap, "ResearchAndDevelopmentExpense");
-  const ebitSeries = firstSeries(usGaap, [
+  const sgaSel = selectSeries(usGaap, ["SellingGeneralAndAdministrativeExpense"]);
+  const rdSel = selectSeries(usGaap, ["ResearchAndDevelopmentExpense"]);
+  const ebitSel = selectSeries(usGaap, [
     "OperatingIncomeLoss",
     "EarningsBeforeInterestAndTaxes",
     "OperatingIncomeLossContinuingOperations",
   ]);
-  const interestSeries = firstSeries(usGaap, [
+  const interestSel = selectSeries(usGaap, [
     "InterestExpense",
     "InterestExpenseDebt",
   ]);
 
-  const assetsSeries = getAnnualSeries(usGaap, "Assets");
-  const liabilitiesSeries = getAnnualSeries(usGaap, "Liabilities");
-  const equitySeries = firstSeries(usGaap, [
+  const assetsSel = selectSeries(usGaap, ["Assets"]);
+  const liabilitiesSel = selectSeries(usGaap, ["Liabilities"]);
+  const equitySel = selectSeries(usGaap, [
     "StockholdersEquity",
     "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",
   ]);
-  const currentAssetsSeries = getAnnualSeries(usGaap, "AssetsCurrent");
-  const currentLiabilitiesSeries = getAnnualSeries(usGaap, "LiabilitiesCurrent");
-  const retainedSeries = getAnnualSeries(usGaap, "RetainedEarningsAccumulatedDeficit");
+  const currentAssetsSel = selectSeries(usGaap, ["AssetsCurrent"]);
+  const currentLiabilitiesSel = selectSeries(usGaap, ["LiabilitiesCurrent"]);
+  const retainedSel = selectSeries(usGaap, ["RetainedEarningsAccumulatedDeficit"]);
 
-  const longDebtSeries = firstSeries(usGaap, [
+  const longDebtSel = selectSeries(usGaap, [
     "LongTermDebt",
     "LongTermDebtNoncurrent",
     "LongTermDebtAndCapitalLeaseObligations",
   ]);
-  const shortDebtSeries = firstSeries(usGaap, [
+  const shortDebtSel = selectSeries(usGaap, [
     "DebtCurrent",
     "LongTermDebtCurrent",
   ]);
 
-  const operatingCashFlowSeries = firstSeries(usGaap, [
+  const operatingCashFlowSel = selectSeries(usGaap, [
     "NetCashProvidedByUsedInOperatingActivities",
     "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations",
   ]);
-  const capexSeries = firstSeries(usGaap, [
+  const capexSel = selectSeries(usGaap, [
     "PaymentsToAcquirePropertyPlantAndEquipment",
     "PaymentsToAcquirePropertyPlantAndEquipmentNet",
     "PaymentsToAcquireProductiveAssets",
     "CapitalExpenditures",
   ]);
-  const dividendsSeries = firstSeries(usGaap, [
+  const dividendsSel = selectSeries(usGaap, [
     "PaymentsOfDividends",
     "PaymentsOfDividendsCommonStock",
   ]);
-  const repurchaseSeries = firstSeries(usGaap, [
+  const repurchaseSel = selectSeries(usGaap, [
     "RepurchaseOfCommonStock",
     "PaymentsForRepurchaseOfCommonStock",
   ]);
@@ -252,14 +252,54 @@ async function fetchStockData(ticker, env) {
     getLatestFact(usGaap, "WeightedAverageNumberOfDilutedSharesOutstanding", "shares") ||
     getLatestFact(usGaap, "WeightedAverageNumberOfSharesOutstandingBasic", "shares");
 
+  const revenueSeries = revenueSel.series;
+  const grossProfitSeries = grossProfitSel.series;
+  const netIncomeSeries = netIncomeSel.series;
+  const sgaSeries = sgaSel.series;
+  const rdSeries = rdSel.series;
+  const ebitSeries = ebitSel.series;
+  const interestSeries = interestSel.series;
+  const assetsSeries = assetsSel.series;
+  const liabilitiesSeries = liabilitiesSel.series;
+  const equitySeries = equitySel.series;
+  const currentAssetsSeries = currentAssetsSel.series;
+  const currentLiabilitiesSeries = currentLiabilitiesSel.series;
+  const retainedSeries = retainedSel.series;
+  const longDebtSeries = longDebtSel.series;
+  const shortDebtSeries = shortDebtSel.series;
+  const operatingCashFlowSeries = operatingCashFlowSel.series;
+  const capexSeries = capexSel.series;
+  const dividendsSeries = dividendsSel.series;
+  const repurchaseSeries = repurchaseSel.series;
+
   const currency =
-    revenueSeries.unit ||
-    netIncomeSeries.unit ||
-    assetsSeries.unit ||
+    revenueSel.unit ||
+    netIncomeSel.unit ||
+    assetsSel.unit ||
     "USD";
   const fxRate = await getFxRate(currency, env);
   const convert = (value) =>
     value === null || value === undefined ? null : value * fxRate;
+
+  const revenueItem = latestItem(revenueSeries);
+  const grossProfitItem = latestItem(grossProfitSeries);
+  const netIncomeItem = latestItem(netIncomeSeries);
+  const sgaItem = latestItem(sgaSeries);
+  const rdItem = latestItem(rdSeries);
+  const ebitItem = latestItem(ebitSeries);
+  const interestItem = latestItem(interestSeries);
+  const assetsItem = latestItem(assetsSeries);
+  const liabilitiesItem = latestItem(liabilitiesSeries);
+  const equityItem = latestItem(equitySeries);
+  const currentAssetsItem = latestItem(currentAssetsSeries);
+  const currentLiabilitiesItem = latestItem(currentLiabilitiesSeries);
+  const retainedItem = latestItem(retainedSeries);
+  const longDebtItem = latestItem(longDebtSeries);
+  const shortDebtItem = latestItem(shortDebtSeries);
+  const operatingCashFlowItem = latestItem(operatingCashFlowSeries);
+  const capexItem = latestItem(capexSeries);
+  const dividendsItem = latestItem(dividendsSeries);
+  const repurchaseItem = latestItem(repurchaseSeries);
 
   const revenue = convert(latestValue(revenueSeries));
   const grossProfit = convert(latestValue(grossProfitSeries));
@@ -378,6 +418,61 @@ async function fetchStockData(ticker, env) {
     terminalGrowth: 0.02,
   });
 
+  const provenance = {
+    grossMargin: {
+      sources: [
+        sourceFrom(grossProfitSel, grossProfitItem),
+        sourceFrom(revenueSel, revenueItem),
+      ].filter(Boolean),
+    },
+    sgaEfficiency: {
+      sources: [
+        sourceFrom(sgaSel, sgaItem),
+        sourceFrom(revenueSel, revenueItem),
+      ].filter(Boolean),
+    },
+    rdReliance: {
+      sources: [
+        sourceFrom(rdSel, rdItem),
+        sourceFrom(revenueSel, revenueItem),
+      ].filter(Boolean),
+    },
+    netMargin: {
+      sources: [
+        sourceFrom(netIncomeSel, netIncomeItem),
+        sourceFrom(revenueSel, revenueItem),
+      ].filter(Boolean),
+    },
+    consistentEarnings: {
+      sources: [sourceFrom(netIncomeSel, netIncomeItem)].filter(Boolean),
+    },
+    interestCoverage: {
+      sources: [
+        sourceFrom(ebitSel, ebitItem),
+        sourceFrom(interestSel, interestItem),
+      ].filter(Boolean),
+    },
+    debtToEquity: {
+      sources: [
+        sourceFrom(longDebtSel, longDebtItem),
+        sourceFrom(shortDebtSel, shortDebtItem),
+        sourceFrom(equitySel, equityItem),
+      ].filter(Boolean),
+    },
+    roe: {
+      sources: [
+        sourceFrom(netIncomeSel, netIncomeItem),
+        sourceFrom(equitySel, equityItem),
+      ].filter(Boolean),
+    },
+    capexEfficiency: {
+      sources: [
+        sourceFrom(capexSel, capexItem),
+        sourceFrom(operatingCashFlowSel, operatingCashFlowItem),
+      ].filter(Boolean),
+    },
+  };
+
   return {
     ticker: resolvedTicker,
     name: facts?.entityName || resolvedTicker,
@@ -407,6 +502,7 @@ async function fetchStockData(ticker, env) {
       freeCashFlow,
       marketCap,
     },
+    provenance,
     valuation: {
       dcf: {
         low: dcfLow,
@@ -551,14 +647,18 @@ function getAnnualSeries(usGaap, tag, unit = "USD") {
   return sorted;
 }
 
-function firstSeries(usGaap, tags, unit = "USD") {
+function selectSeries(usGaap, tags, unit = "USD") {
   for (const tag of tags) {
     const series = getAnnualSeries(usGaap, tag, unit);
-    if (series.length) return series;
+    if (series.length) {
+      return {
+        tag,
+        series,
+        unit: series.unit || unit,
+      };
+    }
   }
-  const empty = [];
-  empty.unit = unit;
-  return empty;
+  return { tag: tags[0], series: [], unit };
 }
 
 function getLatestFact(usGaap, tag, unit) {
@@ -572,6 +672,23 @@ function getLatestFact(usGaap, tag, unit) {
 function latestValue(series) {
   if (!series || !series.length) return null;
   return toNumber(series[0].val);
+}
+
+function latestItem(series) {
+  if (!series || !series.length) return null;
+  return series[0];
+}
+
+function sourceFrom(selection, item) {
+  if (!selection || !item) return null;
+  return {
+    tag: selection.tag,
+    unit: selection.unit || null,
+    end: item.end || null,
+    fy: item.fy || null,
+    form: item.form || null,
+    val: item.val ?? null,
+  };
 }
 
 function padCik(value) {

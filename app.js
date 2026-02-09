@@ -48,6 +48,22 @@ function formatNumber(value) {
   return `${value.toFixed(2)}`;
 }
 
+function formatSourceList(sources) {
+  if (!Array.isArray(sources) || !sources.length) return "";
+  return sources
+    .map((source) => {
+      const parts = [
+        source.tag,
+        source.form || null,
+        source.fy ? `FY${source.fy}` : null,
+        source.end || null,
+        source.unit ? `(${source.unit})` : null,
+      ].filter(Boolean);
+      return parts.join(" ");
+    })
+    .join(" • ");
+}
+
 function emptyData(ticker = "") {
   return {
     ticker,
@@ -161,9 +177,10 @@ function renderSuggestions(list) {
   container.classList.toggle("is-active", list.length > 0);
 
   list.forEach((item) => {
-    const row = document.createElement("div");
+    const row = document.createElement("a");
     row.className = "suggestion-item";
     row.dataset.ticker = item.ticker;
+    row.href = `#/analyzer/${encodeURIComponent(item.ticker)}`;
     row.innerHTML = `
       <span class="suggestion-ticker">${item.ticker}</span>
       <span class="suggestion-title">${item.title || ""}</span>
@@ -229,26 +246,31 @@ function goTo(route, ticker) {
 function scoreChecklist(metrics) {
   const checks = [
     {
+      key: "grossMargin",
       label: "Gross Margin > 40%",
       value: formatValue(metrics.grossMargin, "%"),
       pass: metrics.grossMargin !== null && metrics.grossMargin > 40,
     },
     {
+      key: "sgaEfficiency",
       label: "SG&A Efficiency < 30%",
       value: formatValue(metrics.sgaEfficiency, "%"),
       pass: metrics.sgaEfficiency !== null && metrics.sgaEfficiency < 30,
     },
     {
+      key: "rdReliance",
       label: "R&D Reliance < 30%",
       value: formatValue(metrics.rdReliance, "%"),
       pass: metrics.rdReliance !== null && metrics.rdReliance < 30,
     },
     {
+      key: "netMargin",
       label: "Net Margin > 20%",
       value: formatValue(metrics.netMargin, "%"),
       pass: metrics.netMargin !== null && metrics.netMargin > 20,
     },
     {
+      key: "consistentEarnings",
       label: "Consistent Earnings (all yrs)",
       value: metrics.consistentEarningsYears
         ? `${metrics.consistentEarnings}/${metrics.consistentEarningsYears} yrs`
@@ -259,26 +281,31 @@ function scoreChecklist(metrics) {
         metrics.consistentEarnings === metrics.consistentEarningsYears,
     },
     {
+      key: "interestCoverage",
       label: "Interest Coverage > 6x",
       value: metrics.interestCoverage !== null ? `${metrics.interestCoverage}x` : "—",
       pass: metrics.interestCoverage !== null && metrics.interestCoverage > 6,
     },
     {
+      key: "debtToEquity",
       label: "Debt / Equity < 0.5",
       value: formatValue(metrics.debtToEquity),
       pass: metrics.debtToEquity !== null && metrics.debtToEquity < 0.5,
     },
     {
+      key: "roe",
       label: "ROE > 15%",
       value: formatValue(metrics.roe, "%"),
       pass: metrics.roe !== null && metrics.roe > 15,
     },
     {
+      key: "capexEfficiency",
       label: "Capex Efficiency < 50%",
       value: formatValue(metrics.capexEfficiency, "%"),
       pass: metrics.capexEfficiency !== null && metrics.capexEfficiency < 50,
     },
     {
+      key: "dollarTest",
       label: "$1 Test > 1.0",
       value: formatValue(metrics.dollarTest),
       pass: metrics.dollarTest !== null && metrics.dollarTest > 1,
@@ -365,7 +392,17 @@ function renderAnalyzer(data) {
     row.className = "table-row";
 
     const label = document.createElement("div");
+    label.className = "label-cell";
     label.textContent = check.label;
+    const provenance = data.provenance?.[check.key]?.sources;
+    const sourceText = formatSourceList(provenance);
+    if (sourceText) {
+      const badge = document.createElement("span");
+      badge.className = "source-badge";
+      badge.textContent = "SEC";
+      badge.title = sourceText;
+      label.appendChild(badge);
+    }
 
     const value = document.createElement("div");
     value.textContent = check.value;
