@@ -382,13 +382,13 @@ button:hover {
   grid-template-columns: 1.6fr 0.7fr;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 1.4rem;
+  margin-bottom: 1.2rem;
 }
 
 .score-card {
   background: rgba(255, 255, 255, 0.9);
-  padding: 0.8rem 1.2rem;
-  border-radius: 20px;
+  padding: 0.7rem 1.1rem;
+  border-radius: 18px;
   border: 1px solid var(--stroke);
   text-align: center;
   box-shadow: var(--shadow-soft);
@@ -414,22 +414,22 @@ button:hover {
 
 .analyzer-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 0.9fr);
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
   gap: 1.6rem;
   align-items: start;
-  margin-bottom: 1.6rem;
+  margin-bottom: 1.4rem;
 }
 
 .analyzer-col {
   display: grid;
-  gap: 1.2rem;
+  gap: 1rem;
 }
 
 .panel {
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--stroke);
-  border-radius: 24px;
-  padding: 1.4rem;
+  border-radius: 22px;
+  padding: 1.2rem;
   box-shadow: var(--shadow);
 }
 
@@ -437,7 +437,7 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1rem;
+  margin-bottom: 0.8rem;
 }
 
 .table {
@@ -447,8 +447,8 @@ button:hover {
 
 .table-row {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 0.6fr;
-  padding: 0.55rem 0.2rem;
+  grid-template-columns: 1.4fr 0.9fr 0.5fr;
+  padding: 0.5rem 0.15rem;
   border-bottom: 1px solid var(--stroke);
   align-items: center;
 }
@@ -492,8 +492,8 @@ button:hover {
 .snapshot-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
-  margin-bottom: 1.1rem;
+  gap: 0.7rem;
+  margin-bottom: 0.9rem;
 }
 
 .snapshot-panel {
@@ -507,11 +507,11 @@ button:hover {
 
 .snapshot-card {
   background: linear-gradient(140deg, #fffcf7, #f8efe3);
-  border-radius: 20px;
-  padding: 0.85rem;
+  border-radius: 18px;
+  padding: 0.75rem 0.8rem;
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.4rem;
   border: 1px solid rgba(10, 15, 31, 0.08);
   box-shadow: 0 10px 24px rgba(9, 12, 24, 0.06);
 }
@@ -563,15 +563,19 @@ button:hover {
 
 .moat-summary {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.6rem;
   color: #232836;
+}
+
+.moat-summary.compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .moat-item {
   border: 1px solid rgba(10, 15, 31, 0.1);
   background: #fdf9f3;
-  border-radius: 14px;
-  padding: 0.65rem 0.8rem;
+  border-radius: 12px;
+  padding: 0.55rem 0.65rem;
 }
 
 .moat-item-head {
@@ -583,24 +587,24 @@ button:hover {
 }
 
 .moat-item-head strong {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: #111827;
 }
 
 .moat-item p {
   margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.4;
+  font-size: 0.85rem;
+  line-height: 1.35;
   color: #2e3544;
 }
 
 .moat-tone {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   border-radius: 999px;
-  padding: 0.2rem 0.55rem;
+  padding: 0.15rem 0.45rem;
   border: 1px solid transparent;
   white-space: nowrap;
 }
@@ -630,7 +634,7 @@ button:hover {
 }
 
 .snapshot-card strong {
-  font-size: 1.45rem;
+  font-size: 1.3rem;
   font-family: "Bricolage Grotesque", sans-serif;
   letter-spacing: -0.01em;
 }
@@ -639,16 +643,16 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.7rem;
-  padding-top: 0.2rem;
+  gap: 0.6rem;
+  padding-top: 0.1rem;
 }
 
 .snapshot-hint {
   margin: 0;
-  max-width: 34ch;
+  max-width: 30ch;
   color: #5b6476;
-  font-size: 0.85rem;
-  line-height: 1.35;
+  font-size: 0.8rem;
+  line-height: 1.3;
 }
 
 .bars {
@@ -843,12 +847,6 @@ textarea {
   }
 }
 
-@media (max-width: 1200px) {
-  .analyzer-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
 @media (max-width: 1024px) {
   .hero {
     grid-template-columns: 1fr;
@@ -859,7 +857,7 @@ textarea {
   }
 
   .analyzer-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .page-head {
