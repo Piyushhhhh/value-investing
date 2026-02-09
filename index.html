@@ -204,43 +204,75 @@
         <div class="page-head">
           <div>
             <h2>Methodology</h2>
-            <p class="muted">Definitions, thresholds, and data cadence.</p>
+            <p class="muted">Clear, plain‑English rules behind every score.</p>
           </div>
         </div>
-        <div class="grid two">
-          <div class="panel">
-            <h3>Checklist Signals (What we test)</h3>
-            <ul class="plain">
-              <li><strong>Gross Margin &gt; 40%</strong> — Pricing power and strong unit economics.</li>
-              <li><strong>SG&amp;A Efficiency &lt; 30%</strong> — Overhead stays controlled as revenue grows.</li>
-              <li><strong>R&amp;D Reliance &lt; 30%</strong> — R&amp;D is healthy but not consuming the business.</li>
-              <li><strong>Net Margin &gt; 20%</strong> — The business keeps meaningful profit after all costs.</li>
-              <li><strong>Consistent Earnings</strong> — Profitable in most years of the last 5–10 (based on available SEC data).</li>
-              <li><strong>Interest Coverage &gt; 6x</strong> — Operating earnings comfortably cover interest expense.</li>
-              <li><strong>Debt / Equity &lt; 0.5</strong> — Balance sheet uses conservative leverage.</li>
-              <li><strong>ROE &gt; 15%</strong> — Equity capital is producing strong returns.</li>
-              <li><strong>Capex Efficiency &lt; 50%</strong> — Cash generation isn’t being swallowed by capex.</li>
-              <li><strong>$1 Test &gt; 1.0</strong> — For each $1 retained, more than $1 in value is created.</li>
+        <div class="method-grid">
+          <div class="method-card">
+            <div class="method-card__head">
+              <span class="method-chip">Checklist</span>
+              <h3>What We Test</h3>
+            </div>
+            <ul class="method-list">
+              <li><strong>Gross Margin &gt; 40%</strong><span>Pricing power and strong unit economics.</span></li>
+              <li><strong>SG&amp;A Efficiency &lt; 30%</strong><span>Overhead stays controlled as revenue grows.</span></li>
+              <li><strong>R&amp;D Reliance &lt; 30%</strong><span>Healthy innovation without over‑spending.</span></li>
+              <li><strong>Net Margin &gt; 20%</strong><span>Meaningful profit after all costs.</span></li>
+              <li><strong>Consistent Earnings</strong><span>Profitable in most years (5–10 based on filings).</span></li>
+              <li><strong>Interest Coverage &gt; 6x</strong><span>Earnings comfortably cover interest.</span></li>
+              <li><strong>Debt / Equity &lt; 0.5</strong><span>Conservative balance‑sheet leverage.</span></li>
+              <li><strong>ROE &gt; 15%</strong><span>Equity capital produces strong returns.</span></li>
+              <li><strong>Capex Efficiency &lt; 50%</strong><span>Cash generation not swallowed by capex.</span></li>
+              <li><strong>$1 Test &gt; 1.0</strong><span>Each $1 retained creates &gt; $1 value.</span></li>
             </ul>
           </div>
-          <div class="panel">
-            <h3>How to Read the Score</h3>
-            <p><strong>Signals only count when data exists.</strong> Missing data shows as “No data” and does not count as a fail.</p>
-            <p><strong>Score = passes / available signals.</strong> Example: 6/8 means two signals had no data.</p>
-            <p><strong>Verdict labels</strong> are simple buckets: Strong (8+), Mixed (5–7), Weak (&lt;5).</p>
-            <p class="muted">Scores are directional, not a buy/sell recommendation.</p>
+
+          <div class="method-card">
+            <div class="method-card__head">
+              <span class="method-chip">Scoring</span>
+              <h3>How the Score Works</h3>
+            </div>
+            <div class="method-copy">
+              <p><strong>Signals only count when data exists.</strong> Missing data shows as “No data” and does not count as a fail.</p>
+              <p><strong>Score = passes / available signals.</strong> Example: 6/8 means two signals had no data.</p>
+              <p><strong>Verdicts:</strong> Strong (8+), Mixed (5–7), Weak (&lt;5).</p>
+            </div>
           </div>
-          <div class="panel">
-            <h3>Data Sources &amp; Cadence</h3>
-            <p><strong>Fundamentals:</strong> SEC XBRL filings (10‑K/10‑Q).</p>
-            <p><strong>Price &amp; Market Cap:</strong> FMP free‑tier `/quote` endpoint.</p>
-            <p><strong>Refresh:</strong> Cached daily (24h). US stocks only.</p>
+
+          <div class="method-card">
+            <div class="method-card__head">
+              <span class="method-chip">Sources</span>
+              <h3>Data &amp; Refresh</h3>
+            </div>
+            <div class="method-copy">
+              <p><strong>Fundamentals:</strong> SEC XBRL filings (10‑K/10‑Q).</p>
+              <p><strong>Price &amp; Market Cap:</strong> FMP free‑tier `/quote` endpoint.</p>
+              <p><strong>Refresh:</strong> Cached daily (24h). US stocks only.</p>
+            </div>
           </div>
-          <div class="panel">
-            <h3>Valuation &amp; Compare</h3>
-            <p><strong>Fair value ranges</strong> show conservative/base/optimistic scenarios.</p>
-            <p><strong>Compare</strong> highlights which stock is stronger per metric.</p>
-            <p class="muted">All outputs are educational and not investment advice.</p>
+
+          <div class="method-card">
+            <div class="method-card__head">
+              <span class="method-chip">Valuation</span>
+              <h3>Fair Value &amp; Compare</h3>
+            </div>
+            <div class="method-copy">
+              <p><strong>Fair value ranges</strong> show conservative, base, and optimistic scenarios.</p>
+              <p><strong>Compare</strong> highlights which stock is stronger per metric.</p>
+              <p class="muted">All outputs are educational and not investment advice.</p>
+            </div>
+          </div>
+
+          <div class="method-card method-wide">
+            <div class="method-card__head">
+              <span class="method-chip">Tips</span>
+              <h3>How to Use It</h3>
+            </div>
+            <div class="method-copy">
+              <p>Use the checklist as a quick filter, then drill into filings before making decisions.</p>
+              <p>Compare two stocks in the same industry to see relative strengths at a glance.</p>
+              <p>Keep an eye on “No data” rows; they can hide edge cases like banks or insurers.</p>
+            </div>
           </div>
         </div>
       </section>
