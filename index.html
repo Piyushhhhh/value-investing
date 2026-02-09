@@ -209,25 +209,38 @@
         </div>
         <div class="grid two">
           <div class="panel">
-            <h3>Checklist Signals</h3>
+            <h3>Checklist Signals (What we test)</h3>
             <ul class="plain">
-              <li>Gross Margin > 40%</li>
-              <li>SG&A Efficiency < 30%</li>
-              <li>R&D Reliance < 30%</li>
-              <li>Net Margin > 20%</li>
-              <li>Consistent Earnings: profitability in last 5–10 years (based on available data)</li>
-              <li>Interest Coverage > 6x</li>
-              <li>Debt / Equity < 0.5</li>
-              <li>ROE > 15%</li>
-              <li>Capex Efficiency < 50%</li>
-              <li>$1 Test > 1.0</li>
+              <li><strong>Gross Margin &gt; 40%</strong> — Pricing power and strong unit economics.</li>
+              <li><strong>SG&amp;A Efficiency &lt; 30%</strong> — Overhead stays controlled as revenue grows.</li>
+              <li><strong>R&amp;D Reliance &lt; 30%</strong> — R&amp;D is healthy but not consuming the business.</li>
+              <li><strong>Net Margin &gt; 20%</strong> — The business keeps meaningful profit after all costs.</li>
+              <li><strong>Consistent Earnings</strong> — Profitable in most years of the last 5–10 (based on available SEC data).</li>
+              <li><strong>Interest Coverage &gt; 6x</strong> — Operating earnings comfortably cover interest expense.</li>
+              <li><strong>Debt / Equity &lt; 0.5</strong> — Balance sheet uses conservative leverage.</li>
+              <li><strong>ROE &gt; 15%</strong> — Equity capital is producing strong returns.</li>
+              <li><strong>Capex Efficiency &lt; 50%</strong> — Cash generation isn’t being swallowed by capex.</li>
+              <li><strong>$1 Test &gt; 1.0</strong> — For each $1 retained, more than $1 in value is created.</li>
             </ul>
           </div>
           <div class="panel">
-            <h3>Data Cadence</h3>
-            <p>Data is refreshed daily and cached for 24 hours. US stocks only.</p>
-            <p>Intrinsic value ranges use conservative, base, and optimistic assumptions.</p>
-            <p>All outputs are educational and not investment advice.</p>
+            <h3>How to Read the Score</h3>
+            <p><strong>Signals only count when data exists.</strong> Missing data shows as “No data” and does not count as a fail.</p>
+            <p><strong>Score = passes / available signals.</strong> Example: 6/8 means two signals had no data.</p>
+            <p><strong>Verdict labels</strong> are simple buckets: Strong (8+), Mixed (5–7), Weak (&lt;5).</p>
+            <p class="muted">Scores are directional, not a buy/sell recommendation.</p>
+          </div>
+          <div class="panel">
+            <h3>Data Sources &amp; Cadence</h3>
+            <p><strong>Fundamentals:</strong> SEC XBRL filings (10‑K/10‑Q).</p>
+            <p><strong>Price &amp; Market Cap:</strong> FMP free‑tier `/quote` endpoint.</p>
+            <p><strong>Refresh:</strong> Cached daily (24h). US stocks only.</p>
+          </div>
+          <div class="panel">
+            <h3>Valuation &amp; Compare</h3>
+            <p><strong>Fair value ranges</strong> show conservative/base/optimistic scenarios.</p>
+            <p><strong>Compare</strong> highlights which stock is stronger per metric.</p>
+            <p class="muted">All outputs are educational and not investment advice.</p>
           </div>
         </div>
       </section>
