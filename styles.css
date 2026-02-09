@@ -535,6 +535,22 @@ button:hover {
   box-shadow: var(--shadow-soft);
 }
 
+.moat-summary {
+  display: grid;
+  gap: 0.8rem;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #232836;
+}
+
+.moat-summary p {
+  margin: 0;
+}
+
+.moat-summary strong {
+  color: #111827;
+}
+
 .snapshot-card strong {
   font-size: 1.05rem;
 }

@@ -48,6 +48,72 @@ function formatNumber(value) {
   return `${value.toFixed(2)}`;
 }
 
+function formatPercent(value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  return `${value.toFixed(1)}%`;
+}
+
+function formatRatio(value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  return value.toFixed(2);
+}
+
+function generateMoatSummary(data) {
+  const { metrics, snapshots } = data;
+  const gm = metrics.grossMargin;
+  const nm = metrics.netMargin;
+  const capexEff = metrics.capexEfficiency;
+  const debtEq = metrics.debtToEquity;
+  const interest = metrics.interestCoverage;
+  const z = snapshots.altmanZ;
+  const yieldPct = snapshots.shareholderYield;
+
+  const pricing =
+    gm === null && nm === null
+      ? "Pricing power is unclear due to missing margin data."
+      : gm !== null && gm > 40 && nm !== null && nm > 20
+        ? `Pricing power looks strong with gross margin ${formatPercent(gm)} and net margin ${formatPercent(nm)}.`
+        : gm !== null && gm > 40
+          ? `Gross margin at ${formatPercent(gm)} suggests pricing power, but net margin (${formatPercent(nm)}) is more mixed.`
+          : nm !== null && nm > 20
+            ? `Net margin at ${formatPercent(nm)} is healthy, though gross margin (${formatPercent(gm)}) is more modest.`
+            : `Margins are below the preferred range (gross ${formatPercent(gm)}, net ${formatPercent(nm)}).`;
+
+  const capital =
+    capexEff === null
+      ? "Capital intensity is unclear due to missing capex data."
+      : capexEff < 50
+        ? `Capital intensity looks manageable with capex efficiency at ${formatPercent(capexEff)}.`
+        : `Capital intensity is heavier; capex efficiency is ${formatPercent(capexEff)}.`;
+
+  const balance =
+    debtEq === null && interest === null && z === null
+      ? "Balance‑sheet risk is unclear due to missing leverage data."
+      : debtEq !== null && debtEq < 0.5 && interest !== null && interest > 6
+        ? `Balance‑sheet risk appears low (Debt/Equity ${formatRatio(debtEq)}, Interest Coverage ${interest.toFixed(1)}x).`
+        : `Balance‑sheet risk is mixed (Debt/Equity ${formatRatio(debtEq)}, Interest Coverage ${interest === null ? "—" : `${interest.toFixed(1)}x`}).`;
+
+  const safety =
+    z === null
+      ? "Altman Z‑Score is unavailable."
+      : z >= 3
+        ? `Altman Z‑Score is ${z.toFixed(2)}, which signals lower distress risk.`
+        : z >= 1.8
+          ? `Altman Z‑Score is ${z.toFixed(2)}, which is a caution zone.`
+          : `Altman Z‑Score is ${z.toFixed(2)}, indicating higher distress risk.`;
+
+  const buybacks =
+    yieldPct === null
+      ? "Shareholder yield is unavailable."
+      : yieldPct >= 5
+        ? `Shareholder yield is high at ${formatPercent(yieldPct)}, suggesting aggressive buybacks.`
+        : yieldPct >= 2
+          ? `Shareholder yield is moderate at ${formatPercent(yieldPct)}.`
+          : `Shareholder yield is light at ${formatPercent(yieldPct)}.`;
+
+  return [pricing, capital, balance, safety, buybacks];
+}
+
 function formatSourceList(sources) {
   if (!Array.isArray(sources) || !sources.length) return "";
   return sources
@@ -653,6 +719,14 @@ function renderAnalyzer(data) {
 
   $("to-valuation").onclick = () => goTo("valuation", data.ticker);
   renderPeers(data);
+
+  const moat = $("moat-summary");
+  if (moat) {
+    const paragraphs = generateMoatSummary(data)
+      .map((line) => `<p>${line}</p>`)
+      .join("");
+    moat.innerHTML = paragraphs;
+  }
 }
 
 function renderValuation(data) {
@@ -705,11 +779,16 @@ function renderMemo(data) {
   const mos = marginOfSafety(data.valuation);
   const companyName = data.name || data.ticker || "this company";
 
+  const moatLines = generateMoatSummary(data).map((line) => `- ${line}`).join("\n");
+
   const memo = [
     `Executive Summary`,
     score === null
       ? `Data is not available yet for ${companyName}. Try again later.`
       : `${companyName} (${data.ticker}) scores ${score}/${available || 10} on the Value Check. The score suggests a ${verdict.toLowerCase()} profile${mos === null ? "." : `, with a margin of safety around ${mos.toFixed(1)}%.`}`,
+    ``,
+    `Moat Signals Summary`,
+    moatLines,
     `Bull Case`,
     `- Strong shareholder yield (${data.snapshots.shareholderYield ?? "—"}%).`,
     `- Conservative leverage with debt/equity of ${data.metrics.debtToEquity ?? "—"}.`,
