@@ -967,7 +967,7 @@ function init() {
         triggerCompare();
       }
     });
-  }
+  });
 
   window.addEventListener("hashchange", render);
   render();
