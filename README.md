@@ -10,7 +10,7 @@ Check it here:
 Open `index.html` directly or serve the folder with a static server.
 
 ## Configure API
-## Cloudflare Worker (Free Plan)
+### Cloudflare Worker (Free Plan)
 Use the Worker in `worker/` as the backend (no Firebase Functions required).
 Fundamentals come from the SEC XBRL API. The quote (price) comes from FMP’s
 stable `/quote` endpoint.
@@ -40,12 +40,6 @@ If it changes, set the API base in `index.html` before `app.js`:
 </script>
 ```
 
-```html
-<script>
-  window.VALUE_CHECK_API_BASE = "https://YOUR_FUNCTIONS_DOMAIN/api";
-</script>
-```
-
 ## Firebase Functions (Not Used on Free Plan)
 Firebase Functions require the Blaze plan. If you upgrade later, the Functions
 code is in `functions/`.
@@ -53,6 +47,15 @@ code is in `functions/`.
 ## Routes
 Uses hash routes for GitHub Pages:
 - `#/analyzer/BRK.B`
+- `#/compare/AAPL/GOOGL`
 - `#/valuation/BRK.B`
 - `#/memo/BRK.B`
 - `#/snapshot/BRK.B`
+
+## Compare
+The compare page accepts two tickers or company names and renders a head-to-head
+table with winners highlighted per metric.
+
+## Notes
+- Some SEC metrics are missing for certain companies. Missing values are shown
+  as “No data” and do not count as fails in the score.
