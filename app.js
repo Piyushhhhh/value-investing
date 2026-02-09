@@ -69,6 +69,9 @@ function emptyData(ticker = "") {
     ticker,
     name: "",
     price: null,
+    marketCap: null,
+    industry: null,
+    peers: [],
     lastUpdated: "—",
     metrics: {
       grossMargin: null,
@@ -268,6 +271,29 @@ function goToCompare(left, right) {
     return;
   }
   window.location.hash = next;
+}
+
+function renderPeers(data) {
+  const bar = $("peer-bar");
+  const chips = $("peer-chips");
+  const base = $("peer-base");
+  if (!bar || !chips || !base) return;
+  const peers = Array.isArray(data.peers) ? data.peers : [];
+  if (!data.ticker || peers.length === 0) {
+    bar.style.display = "none";
+    return;
+  }
+  bar.style.display = "flex";
+  base.textContent = data.ticker;
+  chips.innerHTML = "";
+  peers.forEach((peer) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "peer-chip";
+    btn.dataset.peer = peer;
+    btn.textContent = peer;
+    chips.appendChild(btn);
+  });
 }
 
 function scoreChecklist(metrics) {
@@ -548,6 +574,7 @@ function renderAnalyzer(data) {
   const metaParts = [
     `Last updated: ${data.lastUpdated}`,
     "Annual",
+    data.industry ? `Industry: ${data.industry}` : null,
     data.price !== null && data.price !== undefined ? `Price: ${formatCurrency(data.price)}` : null,
     data.marketCap !== null && data.marketCap !== undefined
       ? `Market Cap: ${formatCurrency(data.marketCap)}`
@@ -625,6 +652,7 @@ function renderAnalyzer(data) {
   if (checklistMeta) checklistMeta.textContent = signalLabel;
 
   $("to-valuation").onclick = () => goTo("valuation", data.ticker);
+  renderPeers(data);
 }
 
 function renderValuation(data) {
@@ -968,6 +996,17 @@ function init() {
       }
     });
   });
+
+  const peerChips = $("peer-chips");
+  if (peerChips) {
+    peerChips.addEventListener("click", (event) => {
+      const btn = event.target.closest(".peer-chip");
+      if (!btn || !state.ticker) return;
+      const peer = btn.dataset.peer;
+      if (!peer) return;
+      goToCompare(state.ticker, peer);
+    });
+  }
 
   window.addEventListener("hashchange", render);
   render();

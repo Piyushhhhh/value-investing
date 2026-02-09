@@ -4,6 +4,7 @@ const DEFAULT_DAILY_NEW_TICKER_CAP = 25;
 
 const SEC_TICKER_URL = "https://www.sec.gov/files/company_tickers.json";
 const SEC_FACTS_BASE = "https://data.sec.gov/api/xbrl/companyfacts";
+const SEC_SUBMISSIONS_BASE = "https://data.sec.gov/submissions/CIK";
 const FMP_QUOTE_URL = "https://financialmodelingprep.com/stable/quote";
 
 const TRENDING = [
@@ -32,6 +33,7 @@ const TRENDING = [
 const ANNUAL_FORMS = new Set(["10-K", "10-K/A", "20-F", "40-F"]);
 const QUARTERLY_FORMS = new Set(["10-Q", "10-Q/A"]);
 const ALL_FORMS = new Set([...ANNUAL_FORMS, ...QUARTERLY_FORMS]);
+const SIC_PEERS_TTL = 90 * 24 * 60 * 60;
 
 export default {
   async fetch(request, env) {
@@ -184,6 +186,11 @@ async function fetchStockData(ticker, env, period) {
   }
 
   const facts = await secFetchJson(`${SEC_FACTS_BASE}/CIK${cik}.json`, env);
+  const submissions = await fetchSubmissions(cik, env);
+  const sic = submissions?.sic ? String(submissions.sic) : null;
+  const sicDescription = submissions?.sicDescription || null;
+  const industry = sic && sicDescription ? `${sic} — ${sicDescription}` : sicDescription || null;
+  const peers = await getPeersForSic(env, sic, resolvedTicker);
   const usGaap = facts?.facts?.["us-gaap"] || {};
   const dei = facts?.facts?.dei || {};
 
@@ -479,6 +486,9 @@ async function fetchStockData(ticker, env, period) {
   return {
     ticker: resolvedTicker,
     name: facts?.entityName || resolvedTicker,
+    sic,
+    industry,
+    peers,
     price: marketPrice,
     sharesOutstanding: shares || null,
     marketCap,
@@ -559,6 +569,41 @@ async function getTickerIndex(env) {
   const payload = { map, list };
   await putCache(env, "sec:tickers:index", payload);
   return payload;
+}
+
+async function fetchSubmissions(cik, env) {
+  const cacheKey = `sec:submissions:${cik}`;
+  const cached = await getCache(env, cacheKey, true);
+  if (cached) return cached;
+  const data = await secFetchJson(`${SEC_SUBMISSIONS_BASE}${cik}.json`, env);
+  await putCache(env, cacheKey, data);
+  return data;
+}
+
+function fillPeerFallback(peers, ticker) {
+  const unique = new Set(peers);
+  for (const t of TRENDING) {
+    if (unique.size >= 5) break;
+    if (t === ticker) continue;
+    unique.add(t);
+  }
+  return Array.from(unique).slice(0, 5);
+}
+
+async function getPeersForSic(env, sic, ticker) {
+  if (!sic) return fillPeerFallback([], ticker);
+  const key = `sic:${sic}`;
+  const raw = await env.CACHE_KV.get(key, "json");
+  const list = Array.isArray(raw) ? raw : [];
+  if (!list.includes(ticker)) {
+    list.unshift(ticker);
+    const trimmed = list.slice(0, 200);
+    await env.CACHE_KV.put(key, JSON.stringify(trimmed), {
+      expirationTtl: SIC_PEERS_TTL,
+    });
+  }
+  const peers = list.filter((item) => item !== ticker).slice(0, 5);
+  return fillPeerFallback(peers, ticker);
 }
 
 async function secFetchJson(url, env) {

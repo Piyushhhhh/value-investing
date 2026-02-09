@@ -490,6 +490,50 @@ button:hover {
   border: 1px solid rgba(10, 15, 31, 0.06);
 }
 
+.peer-bar {
+  margin-top: 1.8rem;
+  padding: 1rem 1.4rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--stroke);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.peer-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.peer-chips {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.peer-chip {
+  background: rgba(17, 24, 39, 0.06);
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  color: #111827;
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.peer-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+}
+
 .snapshot-card strong {
   font-size: 1.05rem;
 }
@@ -719,6 +763,10 @@ textarea {
   .compare-row {
     grid-template-columns: 1fr;
     gap: 0.35rem;
+  }
+
+  .peer-bar {
+    align-items: flex-start;
   }
 
 }
