@@ -30,6 +30,8 @@ const TRENDING = [
 ];
 
 const ANNUAL_FORMS = new Set(["10-K", "10-K/A", "20-F", "40-F"]);
+const QUARTERLY_FORMS = new Set(["10-Q", "10-Q/A"]);
+const ALL_FORMS = new Set([...ANNUAL_FORMS, ...QUARTERLY_FORMS]);
 
 export default {
   async fetch(request, env) {
@@ -49,7 +51,8 @@ export default {
 
     if (url.pathname.startsWith("/stock/")) {
       const ticker = url.pathname.replace("/stock/", "").trim();
-      return handleStock(ticker, env);
+      const period = normalizePeriod(url.searchParams.get("period"));
+      return handleStock(ticker, env, period);
     }
 
     return new Response("Not found", { status: 404, headers: corsHeaders() });
@@ -88,10 +91,10 @@ async function handleTrending(env) {
   return jsonResponse(payload);
 }
 
-async function handleStock(rawTicker, env) {
+async function handleStock(rawTicker, env, period) {
   if (!rawTicker) return jsonResponse({ error: "Ticker required" }, 400);
   const ticker = rawTicker.toUpperCase();
-  const cacheKey = `stock:${ticker}`;
+  const cacheKey = `stock:${ticker}:${period}`;
   const cached = await getCache(env, cacheKey);
   if (cached) return jsonResponse(cached);
 
@@ -102,7 +105,7 @@ async function handleStock(rawTicker, env) {
   }
 
   try {
-    const payload = await fetchStockData(ticker, env);
+    const payload = await fetchStockData(ticker, env, period);
     await putCache(env, cacheKey, payload);
     return jsonResponse(payload);
   } catch (err) {
@@ -166,7 +169,7 @@ async function resolveTickerFromQuery(rawQuery, env) {
   return null;
 }
 
-async function fetchStockData(ticker, env) {
+async function fetchStockData(ticker, env, period) {
   let resolvedTicker = ticker;
   let cik = await lookupCik(resolvedTicker, env);
   if (!cik) {
@@ -188,63 +191,63 @@ async function fetchStockData(ticker, env) {
     "Revenues",
     "RevenueFromContractWithCustomerExcludingAssessedTax",
     "SalesRevenueNet",
-  ]);
-  const grossProfitSel = selectSeries(usGaap, ["GrossProfit"]);
+  ], period);
+  const grossProfitSel = selectSeries(usGaap, ["GrossProfit"], period);
   const netIncomeSel = selectSeries(usGaap, [
     "NetIncomeLoss",
     "ProfitLoss",
     "NetIncomeLossAvailableToCommonStockholdersBasic",
-  ]);
-  const sgaSel = selectSeries(usGaap, ["SellingGeneralAndAdministrativeExpense"]);
-  const rdSel = selectSeries(usGaap, ["ResearchAndDevelopmentExpense"]);
+  ], period);
+  const sgaSel = selectSeries(usGaap, ["SellingGeneralAndAdministrativeExpense"], period);
+  const rdSel = selectSeries(usGaap, ["ResearchAndDevelopmentExpense"], period);
   const ebitSel = selectSeries(usGaap, [
     "OperatingIncomeLoss",
     "EarningsBeforeInterestAndTaxes",
     "OperatingIncomeLossContinuingOperations",
-  ]);
+  ], period);
   const interestSel = selectSeries(usGaap, [
     "InterestExpense",
     "InterestExpenseDebt",
-  ]);
+  ], period);
 
-  const assetsSel = selectSeries(usGaap, ["Assets"]);
-  const liabilitiesSel = selectSeries(usGaap, ["Liabilities"]);
+  const assetsSel = selectSeries(usGaap, ["Assets"], period);
+  const liabilitiesSel = selectSeries(usGaap, ["Liabilities"], period);
   const equitySel = selectSeries(usGaap, [
     "StockholdersEquity",
     "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",
-  ]);
-  const currentAssetsSel = selectSeries(usGaap, ["AssetsCurrent"]);
-  const currentLiabilitiesSel = selectSeries(usGaap, ["LiabilitiesCurrent"]);
-  const retainedSel = selectSeries(usGaap, ["RetainedEarningsAccumulatedDeficit"]);
+  ], period);
+  const currentAssetsSel = selectSeries(usGaap, ["AssetsCurrent"], period);
+  const currentLiabilitiesSel = selectSeries(usGaap, ["LiabilitiesCurrent"], period);
+  const retainedSel = selectSeries(usGaap, ["RetainedEarningsAccumulatedDeficit"], period);
 
   const longDebtSel = selectSeries(usGaap, [
     "LongTermDebt",
     "LongTermDebtNoncurrent",
     "LongTermDebtAndCapitalLeaseObligations",
-  ]);
+  ], period);
   const shortDebtSel = selectSeries(usGaap, [
     "DebtCurrent",
     "LongTermDebtCurrent",
-  ]);
+  ], period);
 
   const operatingCashFlowSel = selectSeries(usGaap, [
     "NetCashProvidedByUsedInOperatingActivities",
     "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations",
-  ]);
+  ], period);
   const capexSel = selectSeries(usGaap, [
     "PaymentsToAcquirePropertyPlantAndEquipment",
     "PaymentsToAcquirePropertyPlantAndEquipmentNet",
     "PaymentsToAcquireProductiveAssets",
     "CapitalExpenditures",
-  ]);
+  ], period);
   const dividendsSel = selectSeries(usGaap, [
     "PaymentsOfDividends",
     "PaymentsOfDividendsCommonStock",
-  ]);
+  ], period);
   const repurchaseSel = selectSeries(usGaap, [
     "RepurchaseOfCommonStock",
     "PaymentsForRepurchaseOfCommonStock",
-  ]);
+  ], period);
 
   let shares =
     getLatestFact(dei, "EntityCommonStockSharesOutstanding", "shares") ||
@@ -481,6 +484,7 @@ async function fetchStockData(ticker, env) {
     marketCap,
     currency,
     fxRate: fxRate !== 1 ? fxRate : null,
+    period,
     lastUpdated: todayKey(),
     metrics: {
       grossMargin,
@@ -609,7 +613,7 @@ async function fetchQuoteData(symbol, key) {
   };
 }
 
-function getAnnualSeries(usGaap, tag, unit = "USD") {
+function getAnnualSeries(usGaap, tag, unit = "USD", period = "annual") {
   const fact = usGaap?.[tag];
   const units = fact?.units || {};
   let selectedUnit = unit;
@@ -623,12 +627,13 @@ function getAnnualSeries(usGaap, tag, unit = "USD") {
       items = [];
     }
   }
-  const annual = items.filter(
-    (item) =>
-      item.form &&
-      ANNUAL_FORMS.has(item.form) &&
-      (item.fp === "FY" || item.fp === "FYI" || !item.fp)
-  );
+  const formSet = period === "quarterly" ? QUARTERLY_FORMS : ANNUAL_FORMS;
+  const annual = items.filter((item) => {
+    if (!item.form || !formSet.has(item.form)) return false;
+    if (!item.fp) return true;
+    if (period === "quarterly") return item.fp.startsWith("Q");
+    return item.fp === "FY" || item.fp === "FYI";
+  });
 
   const byYear = new Map();
   for (const item of annual) {
@@ -647,9 +652,9 @@ function getAnnualSeries(usGaap, tag, unit = "USD") {
   return sorted;
 }
 
-function selectSeries(usGaap, tags, unit = "USD") {
+function selectSeries(usGaap, tags, period, unit = "USD") {
   for (const tag of tags) {
-    const series = getAnnualSeries(usGaap, tag, unit);
+    const series = getAnnualSeries(usGaap, tag, unit, period);
     if (series.length) {
       return {
         tag,
@@ -664,7 +669,7 @@ function selectSeries(usGaap, tags, unit = "USD") {
 function getLatestFact(usGaap, tag, unit) {
   const fact = usGaap?.[tag];
   const items = fact?.units?.[unit] || [];
-  const filtered = items.filter((item) => item.end && item.form && ANNUAL_FORMS.has(item.form));
+  const filtered = items.filter((item) => item.end && item.form && ALL_FORMS.has(item.form));
   filtered.sort((a, b) => (a.end < b.end ? 1 : -1));
   return filtered.length ? toNumber(filtered[0].val) : null;
 }
@@ -840,6 +845,14 @@ function impliedGrowthRate({
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function normalizePeriod(value) {
+  if (!value) return "annual";
+  const v = value.toLowerCase();
+  if (v.startsWith("q")) return "quarterly";
+  if (v === "quarterly") return "quarterly";
+  return "annual";
 }
 
 async function getFxRate(currency, env) {

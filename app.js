@@ -113,6 +113,7 @@ const state = {
   data: emptyData(""),
   error: null,
   loading: false,
+  period: "annual",
 };
 
 const $ = (id) => document.getElementById(id);
@@ -153,6 +154,24 @@ function updateNavLinks() {
   const navAnalyzer = $("nav-analyzer");
   if (!navAnalyzer) return;
   navAnalyzer.href = state.ticker ? `#/analyzer/${encodeURIComponent(state.ticker)}` : "#/analyzer";
+}
+
+function setPeriod(period) {
+  state.period = period;
+  try {
+    localStorage.setItem("valuecheck.period", period);
+  } catch (err) {
+    console.error(err);
+  }
+  updatePeriodUI();
+}
+
+function updatePeriodUI() {
+  const toggle = $("period-toggle");
+  if (!toggle) return;
+  toggle.querySelectorAll(".toggle-btn").forEach((btn) => {
+    btn.classList.toggle("is-active", btn.dataset.period === state.period);
+  });
 }
 
 async function fetchSuggestions(query) {
@@ -374,6 +393,7 @@ function renderAnalyzer(data) {
   $("analyzer-title").textContent = `${name} · Analyzer`;
   const metaParts = [
     `Last updated: ${data.lastUpdated}`,
+    state.period === "quarterly" ? "Quarterly" : "Annual",
     data.price !== null && data.price !== undefined ? `Price: ${formatCurrency(data.price)}` : null,
     data.marketCap !== null && data.marketCap !== undefined
       ? `Market Cap: ${formatCurrency(data.marketCap)}`
@@ -541,7 +561,7 @@ function renderSnapshot(data) {
 async function fetchStock(ticker) {
   if (!API_BASE) throw new Error("API base not configured.");
 
-  const response = await fetch(`${API_BASE}/stock/${ticker}`);
+  const response = await fetch(`${API_BASE}/stock/${ticker}?period=${state.period}`);
   if (!response.ok) {
     const detail = await response.text();
     throw new Error(detail || "Unable to fetch data");
@@ -598,6 +618,16 @@ async function render() {
 }
 
 function init() {
+  try {
+    const saved = localStorage.getItem("valuecheck.period");
+    if (saved === "annual" || saved === "quarterly") {
+      state.period = saved;
+    }
+  } catch (err) {
+    console.error(err);
+  }
+  updatePeriodUI();
+
   renderTrending();
   renderHomeHero(state.data);
 
@@ -623,10 +653,6 @@ function init() {
       if (suggestionsState.items.length) {
         renderSuggestions(suggestionsState.items);
       }
-    });
-
-    tickerInput.addEventListener("blur", () => {
-      setTimeout(closeSuggestions, 150);
     });
 
     tickerInput.addEventListener("keydown", async (event) => {
@@ -666,6 +692,12 @@ function init() {
     suggestions.addEventListener("click", onPick);
   }
 
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".search")) {
+      closeSuggestions();
+    }
+  });
+
   $("nav-search").addEventListener("click", () => {
     document.getElementById("ticker-input").focus();
     goTo("home");
@@ -680,6 +712,20 @@ function init() {
       } else {
         state.error = "Enter a ticker to analyze.";
         goTo("home");
+      }
+    });
+  }
+
+  const periodToggle = $("period-toggle");
+  if (periodToggle) {
+    periodToggle.addEventListener("click", (event) => {
+      const btn = event.target.closest(".toggle-btn");
+      if (!btn) return;
+      const period = btn.dataset.period;
+      if (!period || period === state.period) return;
+      setPeriod(period);
+      if (state.ticker) {
+        goTo("analyzer", state.ticker);
       }
     });
   }
