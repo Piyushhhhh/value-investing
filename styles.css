@@ -412,6 +412,19 @@ button:hover {
   align-items: start;
 }
 
+.analyzer-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 2rem;
+  align-items: start;
+  margin-bottom: 2rem;
+}
+
+.analyzer-col {
+  display: grid;
+  gap: 1.8rem;
+}
+
 .panel {
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--stroke);
@@ -505,7 +518,7 @@ button:hover {
 
 .peer-bar {
   margin-top: 0;
-  margin-bottom: 1.8rem;
+  margin-bottom: 0;
   padding: 1rem 1.4rem;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.92);
@@ -836,6 +849,10 @@ textarea {
   }
 
   .grid.two {
+    grid-template-columns: 1fr;
+  }
+
+  .analyzer-grid {
     grid-template-columns: 1fr;
   }
 
