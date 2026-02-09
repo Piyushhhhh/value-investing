@@ -101,6 +101,7 @@ function emptyData(ticker = "") {
 const routes = [
   "home",
   "analyzer",
+  "compare",
   "valuation",
   "memo",
   "snapshot",
@@ -111,6 +112,10 @@ const routes = [
 const state = {
   ticker: "",
   data: emptyData(""),
+  compare: {
+    left: emptyData(""),
+    right: emptyData(""),
+  },
   error: null,
   loading: false,
   period: "annual",
@@ -172,16 +177,28 @@ async function fetchSuggestions(query) {
 function renderSuggestions(list) {
   const container = $("search-suggestions");
   if (!container) return;
-  container.innerHTML = "";
   suggestionsState.items = list;
   suggestionsState.open = list.length > 0;
-  container.classList.toggle("is-active", list.length > 0);
+  renderSuggestionsList(container, list, { hrefBase: "analyzer" });
+}
 
+function closeSuggestions() {
+  const container = $("search-suggestions");
+  if (!container) return;
+  container.classList.remove("is-active");
+  suggestionsState.open = false;
+}
+
+function renderSuggestionsList(container, list, options = {}) {
+  container.innerHTML = "";
+  container.classList.toggle("is-active", list.length > 0);
   list.forEach((item) => {
     const row = document.createElement("a");
     row.className = "suggestion-item";
     row.dataset.ticker = item.ticker;
-    row.href = `#/analyzer/${encodeURIComponent(item.ticker)}`;
+    row.href = options.hrefBase
+      ? `#/${options.hrefBase}/${encodeURIComponent(item.ticker)}`
+      : "#";
     row.innerHTML = `
       <span class="suggestion-ticker">${item.ticker}</span>
       <span class="suggestion-title">${item.title || ""}</span>
@@ -190,11 +207,11 @@ function renderSuggestions(list) {
   });
 }
 
-function closeSuggestions() {
-  const container = $("search-suggestions");
-  if (!container) return;
-  container.classList.remove("is-active");
-  suggestionsState.open = false;
+function closeCompareSuggestions() {
+  ["compare-left-suggestions", "compare-right-suggestions"].forEach((id) => {
+    const container = $(id);
+    if (container) container.classList.remove("is-active");
+  });
 }
 
 async function resolveTickerFromInput(rawValue) {
@@ -237,6 +254,15 @@ function goTo(route, ticker) {
   const next = ticker
     ? `#/${route}/${encodeURIComponent(ticker)}`
     : `#/${route}`;
+  if (window.location.hash === next) {
+    render();
+    return;
+  }
+  window.location.hash = next;
+}
+
+function goToCompare(left, right) {
+  const next = `#/compare/${encodeURIComponent(left)}/${encodeURIComponent(right)}`;
   if (window.location.hash === next) {
     render();
     return;
@@ -353,6 +379,150 @@ async function renderTrending() {
     card.addEventListener("click", () => goTo("analyzer", ticker));
     container.appendChild(card);
   });
+}
+
+function compareWinner(leftValue, rightValue, direction) {
+  if (!Number.isFinite(leftValue) || !Number.isFinite(rightValue)) return null;
+  if (leftValue === rightValue) return null;
+  if (direction === "lower") return leftValue < rightValue ? "left" : "right";
+  return leftValue > rightValue ? "left" : "right";
+}
+
+function renderCompare(leftData, rightData) {
+  const grid = $("compare-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  if (!leftData?.ticker || !rightData?.ticker) {
+    grid.innerHTML = `<div class="compare-empty">Enter two tickers to compare.</div>`;
+    return;
+  }
+
+  const leftScore = scoreChecklist(leftData.metrics);
+  const rightScore = scoreChecklist(rightData.metrics);
+  const leftScoreRatio =
+    leftScore.score === null || !leftScore.available
+      ? null
+      : leftScore.score / leftScore.available;
+  const rightScoreRatio =
+    rightScore.score === null || !rightScore.available
+      ? null
+      : rightScore.score / rightScore.available;
+
+  const header = document.createElement("div");
+  header.className = "compare-row compare-header";
+  header.innerHTML = `
+    <div class="compare-label">Metric</div>
+    <div class="compare-cell">${leftData.name || leftData.ticker} (${leftData.ticker})</div>
+    <div class="compare-cell">${rightData.name || rightData.ticker} (${rightData.ticker})</div>
+  `;
+  grid.appendChild(header);
+
+  const rows = [
+    {
+      label: "Value Check Score",
+      leftDisplay:
+        leftScore.score === null ? "—" : `${leftScore.score}/${leftScore.available || 10}`,
+      rightDisplay:
+        rightScore.score === null ? "—" : `${rightScore.score}/${rightScore.available || 10}`,
+      leftValue: leftScoreRatio,
+      rightValue: rightScoreRatio,
+      direction: "higher",
+    },
+    {
+      label: "Gross Margin",
+      leftDisplay: formatValue(leftData.metrics.grossMargin, "%"),
+      rightDisplay: formatValue(rightData.metrics.grossMargin, "%"),
+      leftValue: leftData.metrics.grossMargin,
+      rightValue: rightData.metrics.grossMargin,
+      direction: "higher",
+    },
+    {
+      label: "Net Margin",
+      leftDisplay: formatValue(leftData.metrics.netMargin, "%"),
+      rightDisplay: formatValue(rightData.metrics.netMargin, "%"),
+      leftValue: leftData.metrics.netMargin,
+      rightValue: rightData.metrics.netMargin,
+      direction: "higher",
+    },
+    {
+      label: "ROE",
+      leftDisplay: formatValue(leftData.metrics.roe, "%"),
+      rightDisplay: formatValue(rightData.metrics.roe, "%"),
+      leftValue: leftData.metrics.roe,
+      rightValue: rightData.metrics.roe,
+      direction: "higher",
+    },
+    {
+      label: "Debt / Equity",
+      leftDisplay: formatValue(leftData.metrics.debtToEquity),
+      rightDisplay: formatValue(rightData.metrics.debtToEquity),
+      leftValue: leftData.metrics.debtToEquity,
+      rightValue: rightData.metrics.debtToEquity,
+      direction: "lower",
+    },
+    {
+      label: "Interest Coverage",
+      leftDisplay:
+        leftData.metrics.interestCoverage === null
+          ? "—"
+          : `${leftData.metrics.interestCoverage}x`,
+      rightDisplay:
+        rightData.metrics.interestCoverage === null
+          ? "—"
+          : `${rightData.metrics.interestCoverage}x`,
+      leftValue: leftData.metrics.interestCoverage,
+      rightValue: rightData.metrics.interestCoverage,
+      direction: "higher",
+    },
+    {
+      label: "Shareholder Yield",
+      leftDisplay:
+        leftData.snapshots.shareholderYield === null
+          ? "—"
+          : `${leftData.snapshots.shareholderYield}%`,
+      rightDisplay:
+        rightData.snapshots.shareholderYield === null
+          ? "—"
+          : `${rightData.snapshots.shareholderYield}%`,
+      leftValue: leftData.snapshots.shareholderYield,
+      rightValue: rightData.snapshots.shareholderYield,
+      direction: "higher",
+    },
+    {
+      label: "Altman Z-Score",
+      leftDisplay: leftData.snapshots.altmanZ ?? "—",
+      rightDisplay: rightData.snapshots.altmanZ ?? "—",
+      leftValue: leftData.snapshots.altmanZ,
+      rightValue: rightData.snapshots.altmanZ,
+      direction: "higher",
+    },
+    {
+      label: "Market Cap",
+      leftDisplay: formatCurrency(leftData.marketCap),
+      rightDisplay: formatCurrency(rightData.marketCap),
+      leftValue: leftData.marketCap,
+      rightValue: rightData.marketCap,
+      direction: "higher",
+    },
+  ];
+
+  rows.forEach((row) => {
+    const winner = compareWinner(row.leftValue, row.rightValue, row.direction);
+    const rowEl = document.createElement("div");
+    rowEl.className = "compare-row";
+    rowEl.innerHTML = `
+      <div class="compare-label">${row.label}</div>
+      <div class="compare-cell ${winner === "left" ? "win" : ""}">${row.leftDisplay}</div>
+      <div class="compare-cell ${winner === "right" ? "win" : ""}">${row.rightDisplay}</div>
+    `;
+    grid.appendChild(rowEl);
+  });
+
+  const leftInput = $("compare-left");
+  const rightInput = $("compare-right");
+  if (leftInput) leftInput.value = leftData.ticker;
+  if (rightInput) rightInput.value = rightData.ticker;
 }
 
 function renderHomeHero(data) {
@@ -576,9 +746,37 @@ async function loadTicker(ticker) {
   }
 }
 
+async function loadCompare(left, right) {
+  try {
+    const [leftData, rightData] = await Promise.all([fetchStock(left), fetchStock(right)]);
+    state.compare = { left: leftData, right: rightData };
+    state.error = null;
+  } catch (err) {
+    console.error(err);
+    state.compare = { left: emptyData(left), right: emptyData(right) };
+    state.error = "Data unavailable. Try again later.";
+  }
+}
+
 async function render() {
   const { route, ticker } = parseHash();
   const needsTicker = ["analyzer", "valuation", "memo", "snapshot"].includes(route);
+
+  if (route === "compare") {
+    setActiveRoute("compare");
+    renderError(null);
+    const parts = ticker ? ticker.split("/").filter(Boolean) : [];
+    if (parts.length >= 2) {
+      setLoading(true);
+      await loadCompare(parts[0], parts[1]);
+      setLoading(false);
+      renderError(state.error);
+      renderCompare(state.compare.left, state.compare.right);
+    } else {
+      renderCompare(state.compare.left, state.compare.right);
+    }
+    return;
+  }
 
   if (needsTicker && !ticker && state.ticker) {
     goTo(route, state.ticker);
@@ -677,8 +875,9 @@ function init() {
   }
 
   document.addEventListener("click", (event) => {
-    if (!event.target.closest(".search")) {
+    if (!event.target.closest(".search") && !event.target.closest(".compare-field")) {
       closeSuggestions();
+      closeCompareSuggestions();
     }
   });
 
@@ -696,6 +895,76 @@ function init() {
       } else {
         state.error = "Enter a ticker to analyze.";
         goTo("home");
+      }
+    });
+  }
+
+  const compareLeft = $("compare-left");
+  const compareRight = $("compare-right");
+  const compareGo = $("compare-go");
+  const compareLeftSuggestions = $("compare-left-suggestions");
+  const compareRightSuggestions = $("compare-right-suggestions");
+  const triggerCompare = async () => {
+    const left = await resolveTickerFromInput(compareLeft?.value || "");
+    const right = await resolveTickerFromInput(compareRight?.value || "");
+    if (!left || !right) {
+      renderError("Enter two tickers to compare.");
+      return;
+    }
+    renderError(null);
+    closeCompareSuggestions();
+    goToCompare(left, right);
+  };
+
+  const bindCompareInput = (input, container) => {
+    if (!input || !container) return;
+    const debounced = debounce(async (value) => {
+      const list = await fetchSuggestions(value);
+      renderSuggestionsList(container, list);
+    }, 300);
+
+    input.addEventListener("input", () => {
+      const value = input.value.trim();
+      if (value.length < 2) {
+        renderSuggestionsList(container, []);
+        return;
+      }
+      debounced(value);
+    });
+
+    input.addEventListener("focus", () => {
+      if (container.childElementCount > 0) {
+        container.classList.add("is-active");
+      }
+    });
+
+    const onPick = (event) => {
+      const row = event.target.closest(".suggestion-item");
+      if (!row) return;
+      event.preventDefault();
+      const ticker = row.dataset.ticker;
+      if (!ticker) return;
+      input.value = ticker;
+      renderSuggestionsList(container, []);
+    };
+
+    container.addEventListener("pointerdown", onPick);
+    container.addEventListener("click", onPick);
+  };
+
+  bindCompareInput(compareLeft, compareLeftSuggestions);
+  bindCompareInput(compareRight, compareRightSuggestions);
+
+  if (compareGo) {
+    compareGo.addEventListener("click", triggerCompare);
+  }
+
+  [compareLeft, compareRight].forEach((input) => {
+    if (!input) return;
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        triggerCompare();
       }
     });
   }

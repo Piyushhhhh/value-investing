@@ -19,6 +19,7 @@
       </div>
       <nav class="nav">
         <a href="#/analyzer" id="nav-analyzer">Analyzer</a>
+        <a href="#/compare" id="nav-compare">Compare</a>
         <a href="#/methodology">Methodology</a>
         <a href="#/support">Support</a>
       </nav>
@@ -113,6 +114,34 @@
             <div class="snapshot-grid" id="snapshot-grid"></div>
             <button class="primary" id="to-valuation">View Fair Value</button>
           </div>
+        </div>
+      </section>
+
+      <section id="route-compare" class="route" data-route="compare">
+        <div class="compare-hero">
+          <div class="compare-icon">⚔︎</div>
+          <h2>Head-to-Head Compare</h2>
+          <p class="muted">Stack two stocks side by side and see who wins on fundamentals.</p>
+        </div>
+
+        <div class="compare-bar">
+          <div class="compare-field">
+            <label for="compare-left">Stock #1</label>
+            <input id="compare-left" placeholder="Ticker or company" />
+            <div id="compare-left-suggestions" class="suggestions"></div>
+          </div>
+          <div class="compare-vs">vs</div>
+          <div class="compare-field">
+            <label for="compare-right">Stock #2</label>
+            <input id="compare-right" placeholder="Ticker or company" />
+            <div id="compare-right-suggestions" class="suggestions"></div>
+          </div>
+          <button id="compare-go" class="primary">Compare</button>
+        </div>
+
+        <div class="compare-board">
+          <div class="compare-title">Tale of the Tape</div>
+          <div id="compare-grid" class="compare-grid"></div>
         </div>
       </section>
 
