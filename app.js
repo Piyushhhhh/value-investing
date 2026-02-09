@@ -156,24 +156,6 @@ function updateNavLinks() {
   navAnalyzer.href = state.ticker ? `#/analyzer/${encodeURIComponent(state.ticker)}` : "#/analyzer";
 }
 
-function setPeriod(period) {
-  state.period = period;
-  try {
-    localStorage.setItem("valuecheck.period", period);
-  } catch (err) {
-    console.error(err);
-  }
-  updatePeriodUI();
-}
-
-function updatePeriodUI() {
-  const toggle = $("period-toggle");
-  if (!toggle) return;
-  toggle.querySelectorAll(".toggle-btn").forEach((btn) => {
-    btn.classList.toggle("is-active", btn.dataset.period === state.period);
-  });
-}
-
 async function fetchSuggestions(query) {
   if (!API_BASE) return [];
   try {
@@ -395,7 +377,7 @@ function renderAnalyzer(data) {
   $("analyzer-title").textContent = `${name} · Analyzer`;
   const metaParts = [
     `Last updated: ${data.lastUpdated}`,
-    state.period === "quarterly" ? "Quarterly" : "Annual",
+    "Annual",
     data.price !== null && data.price !== undefined ? `Price: ${formatCurrency(data.price)}` : null,
     data.marketCap !== null && data.marketCap !== undefined
       ? `Market Cap: ${formatCurrency(data.marketCap)}`
@@ -630,16 +612,6 @@ async function render() {
 }
 
 function init() {
-  try {
-    const saved = localStorage.getItem("valuecheck.period");
-    if (saved === "annual" || saved === "quarterly") {
-      state.period = saved;
-    }
-  } catch (err) {
-    console.error(err);
-  }
-  updatePeriodUI();
-
   renderTrending();
   renderHomeHero(state.data);
 
@@ -724,20 +696,6 @@ function init() {
       } else {
         state.error = "Enter a ticker to analyze.";
         goTo("home");
-      }
-    });
-  }
-
-  const periodToggle = $("period-toggle");
-  if (periodToggle) {
-    periodToggle.addEventListener("click", (event) => {
-      const btn = event.target.closest(".toggle-btn");
-      if (!btn) return;
-      const period = btn.dataset.period;
-      if (!period || period === state.period) return;
-      setPeriod(period);
-      if (state.ticker) {
-        goTo("analyzer", state.ticker);
       }
     });
   }

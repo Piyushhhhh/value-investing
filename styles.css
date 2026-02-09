@@ -254,7 +254,7 @@ button:hover {
 
 .page-head {
   display: grid;
-  grid-template-columns: 1.6fr 0.7fr 0.5fr;
+  grid-template-columns: 1.6fr 0.7fr;
   align-items: center;
   gap: 1.5rem;
   margin-bottom: 2rem;
@@ -278,35 +278,6 @@ button:hover {
   color: var(--muted);
 }
 
-.period-toggle {
-  display: inline-flex;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 0.35rem;
-  border-radius: 999px;
-  border: 1px solid var(--stroke);
-  gap: 0.25rem;
-  box-shadow: var(--shadow-soft);
-  justify-self: end;
-}
-
-.toggle-btn {
-  border: none;
-  background: transparent;
-  padding: 0.5rem 1.4rem;
-  border-radius: 999px;
-  font-weight: 700;
-  cursor: pointer;
-  color: var(--muted);
-  font-size: 0.82rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.toggle-btn.is-active {
-  background: #111827;
-  color: white;
-  box-shadow: 0 10px 22px rgba(17, 24, 39, 0.22);
-}
 
 .grid.two {
   display: grid;
@@ -597,10 +568,6 @@ textarea {
 
   .page-head {
     grid-template-columns: 1fr;
-  }
-
-  .period-toggle {
-    justify-self: start;
   }
 }
 
