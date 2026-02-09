@@ -537,18 +537,70 @@ button:hover {
 
 .moat-summary {
   display: grid;
-  gap: 0.8rem;
-  font-size: 1rem;
-  line-height: 1.7;
+  gap: 0.75rem;
   color: #232836;
 }
 
-.moat-summary p {
-  margin: 0;
+.moat-item {
+  border: 1px solid rgba(10, 15, 31, 0.1);
+  background: #fdf9f3;
+  border-radius: 14px;
+  padding: 0.8rem 0.9rem;
 }
 
-.moat-summary strong {
+.moat-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.moat-item-head strong {
+  font-size: 0.95rem;
   color: #111827;
+}
+
+.moat-item p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #2e3544;
+}
+
+.moat-tone {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.moat-tone.good {
+  color: #0b8b49;
+  background: rgba(11, 139, 73, 0.12);
+  border-color: rgba(11, 139, 73, 0.26);
+}
+
+.moat-tone.mixed {
+  color: #825300;
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.moat-tone.warn {
+  color: #b42318;
+  background: rgba(180, 35, 24, 0.12);
+  border-color: rgba(180, 35, 24, 0.25);
+}
+
+.moat-tone.neutral {
+  color: #475467;
+  background: rgba(71, 84, 103, 0.12);
+  border-color: rgba(71, 84, 103, 0.2);
 }
 
 .snapshot-card strong {
