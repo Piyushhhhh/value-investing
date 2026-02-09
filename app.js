@@ -74,31 +74,31 @@ function generateMoatSignals(data) {
     signals.push({
       label: "Pricing Power",
       tone: "neutral",
-      text: "Margins missing.",
+      text: "Margins are missing, so pricing power is unclear.",
     });
   } else if (gm !== null && gm > 40 && nm !== null && nm > 20) {
     signals.push({
       label: "Pricing Power",
       tone: "good",
-      text: `Strong: GM ${formatPercent(gm)}, NM ${formatPercent(nm)}.`,
+      text: `Strong pricing power with GM ${formatPercent(gm)} and NM ${formatPercent(nm)}.`,
     });
   } else if (gm !== null && gm > 40) {
     signals.push({
       label: "Pricing Power",
       tone: "mixed",
-      text: `GM ${formatPercent(gm)}, NM ${formatPercent(nm)}.`,
+      text: `Gross margin is strong at ${formatPercent(gm)}, but net margin is ${formatPercent(nm)}.`,
     });
   } else if (nm !== null && nm > 20) {
     signals.push({
       label: "Pricing Power",
       tone: "mixed",
-      text: `NM ${formatPercent(nm)}, GM ${formatPercent(gm)}.`,
+      text: `Net margin is healthy at ${formatPercent(nm)}, while gross margin is ${formatPercent(gm)}.`,
     });
   } else {
     signals.push({
       label: "Pricing Power",
       tone: "warn",
-      text: `Below target: GM ${formatPercent(gm)}, NM ${formatPercent(nm)}.`,
+      text: `Margins are below target (GM ${formatPercent(gm)}, NM ${formatPercent(nm)}).`,
     });
   }
 
@@ -106,19 +106,19 @@ function generateMoatSignals(data) {
     signals.push({
       label: "Capital Intensity",
       tone: "neutral",
-      text: "Capex data missing.",
+      text: "Capex data is missing, so capital intensity is unclear.",
     });
   } else if (capexEff < 50) {
     signals.push({
       label: "Capital Intensity",
       tone: "good",
-      text: `Efficient at ${formatPercent(capexEff)}.`,
+      text: `Capital intensity looks manageable with capex efficiency at ${formatPercent(capexEff)}.`,
     });
   } else {
     signals.push({
       label: "Capital Intensity",
       tone: "warn",
-      text: `Heavy at ${formatPercent(capexEff)}.`,
+      text: `Capital intensity is heavier with capex efficiency at ${formatPercent(capexEff)}.`,
     });
   }
 
@@ -126,19 +126,19 @@ function generateMoatSignals(data) {
     signals.push({
       label: "Balance Sheet Risk",
       tone: "neutral",
-      text: "Leverage data missing.",
+      text: "Leverage data is missing, so balance sheet risk is unclear.",
     });
   } else if (debtEq !== null && debtEq < 0.5 && interest !== null && interest > 6) {
     signals.push({
       label: "Balance Sheet Risk",
       tone: "good",
-      text: `Low risk: D/E ${formatRatio(debtEq)}, IntCov ${interest.toFixed(1)}x.`,
+      text: `Low risk: D/E ${formatRatio(debtEq)}, Interest Coverage ${interest.toFixed(1)}x.`,
     });
   } else {
     signals.push({
       label: "Balance Sheet Risk",
       tone: "mixed",
-      text: `Mixed: D/E ${formatRatio(debtEq)}, IntCov ${interest === null ? "-" : `${interest.toFixed(1)}x`}.`,
+      text: `Mixed: D/E ${formatRatio(debtEq)}, Interest Coverage ${interest === null ? "-" : `${interest.toFixed(1)}x`}.`,
     });
   }
 
@@ -146,25 +146,25 @@ function generateMoatSignals(data) {
     signals.push({
       label: "Solvency (Altman Z)",
       tone: "neutral",
-      text: "Unavailable.",
+      text: "Altman Z-Score is unavailable.",
     });
   } else if (z >= 3) {
     signals.push({
       label: "Solvency (Altman Z)",
       tone: "good",
-      text: `${z.toFixed(2)} low distress risk.`,
+      text: `${z.toFixed(2)} suggests lower distress risk.`,
     });
   } else if (z >= 1.8) {
     signals.push({
       label: "Solvency (Altman Z)",
       tone: "mixed",
-      text: `${z.toFixed(2)} caution zone.`,
+      text: `${z.toFixed(2)} sits in the caution zone.`,
     });
   } else {
     signals.push({
       label: "Solvency (Altman Z)",
       tone: "warn",
-      text: `${z.toFixed(2)} higher distress risk.`,
+      text: `${z.toFixed(2)} indicates higher distress risk.`,
     });
   }
 
@@ -172,25 +172,25 @@ function generateMoatSignals(data) {
     signals.push({
       label: "Buyback Aggressiveness",
       tone: "neutral",
-      text: "Yield unavailable.",
+      text: "Shareholder yield is unavailable.",
     });
   } else if (yieldPct >= 5) {
     signals.push({
       label: "Buyback Aggressiveness",
       tone: "good",
-      text: `High yield ${formatPercent(yieldPct)}.`,
+      text: `High shareholder yield at ${formatPercent(yieldPct)}.`,
     });
   } else if (yieldPct >= 2) {
     signals.push({
       label: "Buyback Aggressiveness",
       tone: "mixed",
-      text: `Moderate yield ${formatPercent(yieldPct)}.`,
+      text: `Moderate shareholder yield at ${formatPercent(yieldPct)}.`,
     });
   } else {
     signals.push({
       label: "Buyback Aggressiveness",
       tone: "warn",
-      text: `Light yield ${formatPercent(yieldPct)}.`,
+      text: `Light shareholder yield at ${formatPercent(yieldPct)}.`,
     });
   }
 
