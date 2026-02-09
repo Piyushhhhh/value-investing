@@ -263,30 +263,31 @@ function goTo(route, ticker) {
 }
 
 function scoreChecklist(metrics) {
+  const hasValue = (value) => value !== null && value !== undefined;
   const checks = [
     {
       key: "grossMargin",
       label: "Gross Margin > 40%",
-      value: formatValue(metrics.grossMargin, "%"),
-      pass: metrics.grossMargin !== null && metrics.grossMargin > 40,
+      value: hasValue(metrics.grossMargin) ? formatValue(metrics.grossMargin, "%") : "—",
+      pass: hasValue(metrics.grossMargin) ? metrics.grossMargin > 40 : null,
     },
     {
       key: "sgaEfficiency",
       label: "SG&A Efficiency < 30%",
-      value: formatValue(metrics.sgaEfficiency, "%"),
-      pass: metrics.sgaEfficiency !== null && metrics.sgaEfficiency < 30,
+      value: hasValue(metrics.sgaEfficiency) ? formatValue(metrics.sgaEfficiency, "%") : "—",
+      pass: hasValue(metrics.sgaEfficiency) ? metrics.sgaEfficiency < 30 : null,
     },
     {
       key: "rdReliance",
       label: "R&D Reliance < 30%",
-      value: formatValue(metrics.rdReliance, "%"),
-      pass: metrics.rdReliance !== null && metrics.rdReliance < 30,
+      value: hasValue(metrics.rdReliance) ? formatValue(metrics.rdReliance, "%") : "—",
+      pass: hasValue(metrics.rdReliance) ? metrics.rdReliance < 30 : null,
     },
     {
       key: "netMargin",
       label: "Net Margin > 20%",
-      value: formatValue(metrics.netMargin, "%"),
-      pass: metrics.netMargin !== null && metrics.netMargin > 20,
+      value: hasValue(metrics.netMargin) ? formatValue(metrics.netMargin, "%") : "—",
+      pass: hasValue(metrics.netMargin) ? metrics.netMargin > 20 : null,
     },
     {
       key: "consistentEarnings",
@@ -294,50 +295,50 @@ function scoreChecklist(metrics) {
       value: metrics.consistentEarningsYears
         ? `${metrics.consistentEarnings}/${metrics.consistentEarningsYears} yrs`
         : "—",
-      pass:
-        metrics.consistentEarningsYears &&
-        metrics.consistentEarningsYears >= 5 &&
-        metrics.consistentEarnings === metrics.consistentEarningsYears,
+      pass: metrics.consistentEarningsYears
+        ? metrics.consistentEarningsYears >= 5 &&
+          metrics.consistentEarnings === metrics.consistentEarningsYears
+        : null,
     },
     {
       key: "interestCoverage",
       label: "Interest Coverage > 6x",
-      value: metrics.interestCoverage !== null ? `${metrics.interestCoverage}x` : "—",
-      pass: metrics.interestCoverage !== null && metrics.interestCoverage > 6,
+      value: hasValue(metrics.interestCoverage) ? `${metrics.interestCoverage}x` : "—",
+      pass: hasValue(metrics.interestCoverage) ? metrics.interestCoverage > 6 : null,
     },
     {
       key: "debtToEquity",
       label: "Debt / Equity < 0.5",
-      value: formatValue(metrics.debtToEquity),
-      pass: metrics.debtToEquity !== null && metrics.debtToEquity < 0.5,
+      value: hasValue(metrics.debtToEquity) ? formatValue(metrics.debtToEquity) : "—",
+      pass: hasValue(metrics.debtToEquity) ? metrics.debtToEquity < 0.5 : null,
     },
     {
       key: "roe",
       label: "ROE > 15%",
-      value: formatValue(metrics.roe, "%"),
-      pass: metrics.roe !== null && metrics.roe > 15,
+      value: hasValue(metrics.roe) ? formatValue(metrics.roe, "%") : "—",
+      pass: hasValue(metrics.roe) ? metrics.roe > 15 : null,
     },
     {
       key: "capexEfficiency",
       label: "Capex Efficiency < 50%",
-      value: formatValue(metrics.capexEfficiency, "%"),
-      pass: metrics.capexEfficiency !== null && metrics.capexEfficiency < 50,
+      value: hasValue(metrics.capexEfficiency) ? formatValue(metrics.capexEfficiency, "%") : "—",
+      pass: hasValue(metrics.capexEfficiency) ? metrics.capexEfficiency < 50 : null,
     },
     {
       key: "dollarTest",
       label: "$1 Test > 1.0",
-      value: formatValue(metrics.dollarTest),
-      pass: metrics.dollarTest !== null && metrics.dollarTest > 1,
+      value: hasValue(metrics.dollarTest) ? formatValue(metrics.dollarTest) : "—",
+      pass: hasValue(metrics.dollarTest) ? metrics.dollarTest > 1 : null,
     },
   ];
 
-  const hasData = checks.some((c) => c.value !== "—");
-  const score = hasData ? checks.reduce((sum, c) => sum + (c.pass ? 1 : 0), 0) : null;
-  let verdict = hasData ? "Weak" : "Unavailable";
+  const available = checks.filter((c) => c.pass !== null).length;
+  const score = available ? checks.reduce((sum, c) => sum + (c.pass ? 1 : 0), 0) : null;
+  let verdict = available ? "Weak" : "Unavailable";
   if (score !== null && score >= 8) verdict = "Strong";
   else if (score !== null && score >= 5) verdict = "Mixed";
 
-  return { score, verdict, checks };
+  return { score, verdict, checks, available };
 }
 
 function marginOfSafety(valuation) {
@@ -373,8 +374,9 @@ async function renderTrending() {
 }
 
 function renderHomeHero(data) {
-  const { score, verdict } = scoreChecklist(data.metrics);
-  $("hero-score").textContent = score === null ? "—" : `${score}/10`;
+  const { score, verdict, available } = scoreChecklist(data.metrics);
+  $("hero-score").textContent =
+    score === null ? "—" : `${score}/${available || 10}`;
   const mos = marginOfSafety(data.valuation);
   $("hero-mos").textContent = mos === null ? "—" : `${mos.toFixed(1)}%`;
   $("hero-solvency").textContent = data.snapshots.solvency;
@@ -401,9 +403,11 @@ function renderAnalyzer(data) {
   ].filter(Boolean);
   $("analyzer-meta").textContent = metaParts.join(" · ");
 
-  const { score, verdict, checks } = scoreChecklist(data.metrics);
-  $("final-score").textContent = score === null ? "—" : `${score}/10`;
+  const { score, verdict, checks, available } = scoreChecklist(data.metrics);
+  $("final-score").textContent =
+    score === null ? "—" : `${score}/${available || 10}`;
   $("final-verdict").textContent = verdict;
+  const signalLabel = available ? `${available} signals · pass/fail` : "No signals available";
 
   const table = $("checklist-table");
   table.innerHTML = "";
@@ -428,8 +432,13 @@ function renderAnalyzer(data) {
     value.textContent = check.value;
 
     const result = document.createElement("div");
-    result.className = `result ${check.pass ? "pass" : "fail"}`;
-    result.textContent = check.pass ? "Pass" : "Fail";
+    if (check.pass === null) {
+      result.className = "result na";
+      result.textContent = "No data";
+    } else {
+      result.className = `result ${check.pass ? "pass" : "fail"}`;
+      result.textContent = check.pass ? "Pass" : "Fail";
+    }
 
     row.append(label, value, result);
     table.appendChild(row);
@@ -459,6 +468,9 @@ function renderAnalyzer(data) {
     card.innerHTML = `<span class="muted">${item.label}</span><strong>${item.value}</strong>`;
     snapshot.appendChild(card);
   });
+
+  const checklistMeta = table.parentElement?.querySelector(".panel-head .muted");
+  if (checklistMeta) checklistMeta.textContent = signalLabel;
 
   $("to-valuation").onclick = () => goTo("valuation", data.ticker);
 }
@@ -509,7 +521,7 @@ function renderValuation(data) {
 
 function renderMemo(data) {
   $("memo-title").textContent = `${data.ticker} · Investment Memo`;
-  const { score, verdict } = scoreChecklist(data.metrics);
+  const { score, verdict, available } = scoreChecklist(data.metrics);
   const mos = marginOfSafety(data.valuation);
   const companyName = data.name || data.ticker || "this company";
 
@@ -517,7 +529,7 @@ function renderMemo(data) {
     `Executive Summary`,
     score === null
       ? `Data is not available yet for ${companyName}. Try again later.`
-      : `${companyName} (${data.ticker}) scores ${score}/10 on the Value Check. The score suggests a ${verdict.toLowerCase()} profile${mos === null ? "." : `, with a margin of safety around ${mos.toFixed(1)}%.`}`,
+      : `${companyName} (${data.ticker}) scores ${score}/${available || 10} on the Value Check. The score suggests a ${verdict.toLowerCase()} profile${mos === null ? "." : `, with a margin of safety around ${mos.toFixed(1)}%.`}`,
     `Bull Case`,
     `- Strong shareholder yield (${data.snapshots.shareholderYield ?? "—"}%).`,
     `- Conservative leverage with debt/equity of ${data.metrics.debtToEquity ?? "—"}.`,
@@ -533,12 +545,12 @@ function renderMemo(data) {
 
 function renderSnapshot(data) {
   $("snapshot-title").textContent = `${data.ticker} · Snapshot`;
-  const { score, verdict } = scoreChecklist(data.metrics);
+  const { score, verdict, available } = scoreChecklist(data.metrics);
   const mos = marginOfSafety(data.valuation);
 
   $("snapshot-content").innerHTML = `
     <h3>Value Check Final Score</h3>
-    <p><strong>${score === null ? "—" : `${score}/10`}</strong> · ${verdict}</p>
+    <p><strong>${score === null ? "—" : `${score}/${available || 10}`}</strong> · ${verdict}</p>
     <h3>Margin of Safety</h3>
     <p>${mos === null ? "—" : `${mos.toFixed(1)}%`}</p>
     <h3>Key Signals</h3>
