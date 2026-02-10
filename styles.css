@@ -425,6 +425,10 @@ button:hover {
   gap: 1rem;
 }
 
+.moat-panel {
+  margin-bottom: 1rem;
+}
+
 .panel {
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--stroke);
@@ -574,11 +578,16 @@ button:hover {
   color: #232836;
 }
 
+.moat-summary.moat-row {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .moat-item {
   border: 1px solid rgba(10, 15, 31, 0.1);
   background: #fff8ef;
   border-radius: 14px;
-  padding: 0.75rem 0.85rem;
+  padding: 0.7rem 0.75rem;
+  min-height: 120px;
 }
 
 .moat-item-head {
@@ -590,14 +599,14 @@ button:hover {
 }
 
 .moat-item-head strong {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   color: #111827;
 }
 
 .moat-item p {
   margin: 0;
-  font-size: 0.92rem;
-  line-height: 1.5;
+  font-size: 0.84rem;
+  line-height: 1.35;
   color: #2e3544;
 }
 
@@ -850,6 +859,12 @@ textarea {
   }
 }
 
+@media (max-width: 1400px) {
+  .moat-summary.moat-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1024px) {
   .hero {
     grid-template-columns: 1fr;
@@ -861,6 +876,10 @@ textarea {
 
   .analyzer-grid {
     grid-template-columns: 1fr;
+  }
+
+  .moat-summary.moat-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .page-head {
