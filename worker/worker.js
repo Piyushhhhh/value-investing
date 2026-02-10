@@ -102,20 +102,19 @@ async function handleStock(rawTicker, env, period) {
   const cacheKeys = getStockCacheKeys(ticker, period);
   const primaryCacheKey = cacheKeys[0];
 
-  const cached = await getFirstCachedPayload(env, cacheKeys, false);
-  if (cached) {
-    if (cached.key !== primaryCacheKey) {
-      await putCache(env, primaryCacheKey, cached.payload);
-    }
-    return jsonResponse(cached.payload, 200, { "x-cache": "hit" });
+  const primaryCached = await getCache(env, primaryCacheKey, false);
+  if (primaryCached && hasFilingDeltaPayload(primaryCached)) {
+    return jsonResponse(primaryCached, 200, { "x-cache": "hit" });
   }
 
   const cap = Number(env.DAILY_NEW_TICKER_CAP || DEFAULT_DAILY_NEW_TICKER_CAP);
   const allowed = await checkDailyCap(env, ticker, cap);
   if (!allowed) {
-    const stale = await getFirstCachedPayload(env, cacheKeys, true);
+    const stale =
+      (await getFirstCachedPayload(env, cacheKeys, true, hasFilingDeltaPayload)) ||
+      (await getFirstCachedPayload(env, cacheKeys, true));
     if (stale) {
-      if (stale.key !== primaryCacheKey) {
+      if (stale.key !== primaryCacheKey && hasFilingDeltaPayload(stale.payload)) {
         await putCache(env, primaryCacheKey, stale.payload);
       }
       return jsonResponse(stale.payload, 200, { "x-cache": "stale" });
@@ -128,9 +127,11 @@ async function handleStock(rawTicker, env, period) {
     await putCache(env, primaryCacheKey, payload);
     return jsonResponse(payload);
   } catch (err) {
-    const stale = await getFirstCachedPayload(env, cacheKeys, true);
+    const stale =
+      (await getFirstCachedPayload(env, cacheKeys, true, hasFilingDeltaPayload)) ||
+      (await getFirstCachedPayload(env, cacheKeys, true));
     if (stale) {
-      if (stale.key !== primaryCacheKey) {
+      if (stale.key !== primaryCacheKey && hasFilingDeltaPayload(stale.payload)) {
         await putCache(env, primaryCacheKey, stale.payload);
       }
       return jsonResponse(stale.payload, 200, { "x-cache": "stale" });
@@ -148,12 +149,19 @@ function getStockCacheKeys(ticker, period) {
   return keys;
 }
 
-async function getFirstCachedPayload(env, keys, allowStale) {
+function hasFilingDeltaPayload(payload) {
+  if (!payload || typeof payload !== "object") return false;
+  if (!Object.prototype.hasOwnProperty.call(payload, "filingDelta")) return false;
+  const filing = payload.filingDelta;
+  return filing && Array.isArray(filing.metrics);
+}
+
+async function getFirstCachedPayload(env, keys, allowStale, predicate = null) {
   for (const key of keys) {
     const payload = await getCache(env, key, allowStale);
-    if (payload) {
+    if (!payload) continue;
+    if (typeof predicate === "function" && !predicate(payload)) continue;
       return { key, payload };
-    }
   }
   return null;
 }
