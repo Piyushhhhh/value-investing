@@ -739,12 +739,13 @@ function renderAnalyzer(data) {
 
   const table = $("checklist-table");
   table.innerHTML = "";
+  table.classList.add("table--factor");
   checks.forEach((check) => {
     const row = document.createElement("div");
-    row.className = "table-row";
+    row.className = "table-row factor-row";
 
     const label = document.createElement("div");
-    label.className = "label-cell";
+    label.className = "label-cell factor-label";
     label.textContent = check.label;
     const provenance = data.provenance?.[check.key]?.sources;
     const sourceText = formatSourceList(provenance);
@@ -757,6 +758,7 @@ function renderAnalyzer(data) {
     }
 
     const value = document.createElement("div");
+    value.className = "factor-value";
     value.textContent = check.value;
 
     const result = document.createElement("div");

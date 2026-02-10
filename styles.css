@@ -456,12 +456,45 @@ button:hover {
   gap: 0.8rem;
 }
 
+.table.table--factor {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
 .table-row {
   display: grid;
   grid-template-columns: 1.4fr 0.9fr 0.5fr;
   padding: 0.5rem 0.15rem;
   border-bottom: 1px solid var(--stroke);
   align-items: center;
+}
+
+.factor-row {
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "label label"
+    "value result";
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(10, 15, 31, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  gap: 0.45rem 0.8rem;
+}
+
+.factor-row .factor-label {
+  grid-area: label;
+  min-height: 1.4rem;
+}
+
+.factor-row .factor-value {
+  grid-area: value;
+  font-weight: 700;
+  color: #111827;
+}
+
+.factor-row .result {
+  grid-area: result;
+  align-self: center;
 }
 
 .label-cell {
@@ -883,6 +916,10 @@ textarea {
   }
 
   .page-head {
+    grid-template-columns: 1fr;
+  }
+
+  .table.table--factor {
     grid-template-columns: 1fr;
   }
 }
