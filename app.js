@@ -381,7 +381,6 @@ function closeCompareSuggestions() {
 async function resolveTickerFromInput(rawValue) {
   const value = rawValue.trim();
   if (!value) return "";
-  if (suggestionsState.items.length) return suggestionsState.items[0].ticker;
 
   if (API_BASE && value.length >= 2) {
     const results = await fetchSuggestions(value);
@@ -389,6 +388,16 @@ async function resolveTickerFromInput(rawValue) {
   }
 
   return value.toUpperCase();
+}
+
+function canonicalTicker(value) {
+  return (value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function isSameTicker(left, right) {
+  const leftKey = canonicalTicker(left);
+  const rightKey = canonicalTicker(right);
+  return leftKey && rightKey && leftKey === rightKey;
 }
 
 function setActiveRoute(route) {
@@ -582,6 +591,15 @@ function renderCompare(leftData, rightData) {
 
   if (!leftData?.ticker || !rightData?.ticker) {
     grid.innerHTML = `<div class="compare-empty">Enter two tickers to compare.</div>`;
+    return;
+  }
+
+  if (isSameTicker(leftData.ticker, rightData.ticker)) {
+    grid.innerHTML = `<div class="compare-empty">Pick two different tickers to compare.</div>`;
+    const leftInput = $("compare-left");
+    const rightInput = $("compare-right");
+    if (leftInput) leftInput.value = leftData.ticker;
+    if (rightInput) rightInput.value = rightData.ticker;
     return;
   }
 
@@ -1013,6 +1031,13 @@ async function render() {
     renderError(null);
     const parts = ticker ? ticker.split("/").filter(Boolean) : [];
     if (parts.length >= 2) {
+      if (isSameTicker(parts[0], parts[1])) {
+        state.compare = { left: emptyData(parts[0]), right: emptyData(parts[1]) };
+        state.error = "Pick two different tickers to compare.";
+        renderError(state.error);
+        renderCompare(state.compare.left, state.compare.right);
+        return;
+      }
       setLoading(true);
       await loadCompare(parts[0], parts[1]);
       setLoading(false);
@@ -1155,6 +1180,11 @@ function init() {
     const right = await resolveTickerFromInput(compareRight?.value || "");
     if (!left || !right) {
       renderError("Enter two tickers to compare.");
+      return;
+    }
+    if (isSameTicker(left, right)) {
+      renderError("Pick two different tickers to compare.");
+      closeCompareSuggestions();
       return;
     }
     renderError(null);
