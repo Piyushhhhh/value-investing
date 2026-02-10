@@ -476,8 +476,64 @@ button:hover {
   gap: 0.5rem;
 }
 
+.filing-label-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
 .filing-card-head strong {
   font-size: 0.9rem;
+}
+
+.filing-help {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.filing-help-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(10, 15, 31, 0.25);
+  color: #5b6476;
+  background: white;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  flex: 0 0 auto;
+  padding: 0;
+}
+
+.filing-help-tooltip {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  transform: translateX(-50%);
+  background: #111827;
+  color: white;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  width: min(260px, 55vw);
+  box-shadow: 0 12px 24px rgba(9, 12, 24, 0.25);
+  z-index: 20;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.filing-help:hover .filing-help-tooltip,
+.filing-help:focus-within .filing-help-tooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .filing-card-values {

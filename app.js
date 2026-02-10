@@ -92,6 +92,15 @@ function formatDeltaChange(metric) {
   return signed;
 }
 
+function filingDeltaHint(metric) {
+  const base = FACTOR_DESCRIPTIONS[metric.key] || `${metric.label} trend across filings.`;
+  const direction =
+    metric.better === "higher"
+      ? "Higher values are generally better for this metric."
+      : "Lower values are generally better for this metric.";
+  return `${base} Delta compares the latest filing against the previous filing. ${direction}`;
+}
+
 function generateMoatSignals(data) {
   const { metrics, snapshots } = data;
   const gm = metrics.grossMargin;
@@ -844,18 +853,50 @@ function renderFilingDelta(data) {
 
     const card = document.createElement("article");
     card.className = "filing-card";
-    card.innerHTML = `
-      <div class="filing-card-head">
-        <strong>${metric.label}</strong>
-        <span class="filing-delta-tone ${tone}">
-          ${hasDelta ? formatDeltaChange(metric) : hasCurrent || hasPrevious ? "No delta" : "No data"}
-        </span>
-      </div>
-      <p class="filing-card-values">
-        <span>Now: ${formatDeltaMetricValue(metric, metric.current)}</span>
-        <span>Prev: ${formatDeltaMetricValue(metric, metric.previous)}</span>
-      </p>
+
+    const head = document.createElement("div");
+    head.className = "filing-card-head";
+
+    const labelWrap = document.createElement("div");
+    labelWrap.className = "filing-label-wrap";
+
+    const label = document.createElement("strong");
+    label.textContent = metric.label;
+
+    const help = document.createElement("span");
+    help.className = "filing-help";
+
+    const info = document.createElement("button");
+    info.type = "button";
+    info.className = "filing-help-btn";
+    info.textContent = "i";
+    info.setAttribute("aria-label", `About ${metric.label}`);
+
+    const tooltip = document.createElement("span");
+    tooltip.className = "filing-help-tooltip";
+    tooltip.textContent = filingDeltaHint(metric);
+
+    help.append(info, tooltip);
+    labelWrap.append(label, help);
+
+    const toneEl = document.createElement("span");
+    toneEl.className = `filing-delta-tone ${tone}`;
+    toneEl.textContent = hasDelta
+      ? formatDeltaChange(metric)
+      : hasCurrent || hasPrevious
+        ? "No delta"
+        : "No data";
+
+    head.append(labelWrap, toneEl);
+
+    const values = document.createElement("p");
+    values.className = "filing-card-values";
+    values.innerHTML = `
+      <span>Now: ${formatDeltaMetricValue(metric, metric.current)}</span>
+      <span>Prev: ${formatDeltaMetricValue(metric, metric.previous)}</span>
     `;
+
+    card.append(head, values);
     grid.appendChild(card);
   });
 }
