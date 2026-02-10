@@ -7,5 +7,5 @@ binding = "CACHE_KV"
 id = "99441bb3257c43f9bbfb04560c94ad94"
 
 [vars]
-DAILY_NEW_TICKER_CAP = "25"
+DAILY_NEW_TICKER_CAP = "120"
 SEC_USER_AGENT = "ValueCheck/1.0 (contact:Piyushhh01@gmail.com)"

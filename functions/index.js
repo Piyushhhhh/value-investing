@@ -449,12 +449,19 @@ async function fetchStockData(ticker) {
 }
 
 async function getStockPayload(ticker) {
-  const cacheKey = `${STOCK_CACHE_VERSION}:${ticker.toUpperCase()}`;
+  const normalizedTicker = ticker.toUpperCase();
+  const cacheKey = `${STOCK_CACHE_VERSION}:${normalizedTicker}`;
   const cached = await loadFromCache("stock_cache", cacheKey);
   if (cached) return cached;
 
-  await incrementDailyUsage(cacheKey);
-  const payload = await fetchStockData(cacheKey);
+  const legacyCached = await loadFromCache("stock_cache", normalizedTicker);
+  if (legacyCached) {
+    await writeCache("stock_cache", cacheKey, legacyCached);
+    return legacyCached;
+  }
+
+  await incrementDailyUsage(normalizedTicker);
+  const payload = await fetchStockData(normalizedTicker);
   await writeCache("stock_cache", cacheKey, payload);
   return payload;
 }

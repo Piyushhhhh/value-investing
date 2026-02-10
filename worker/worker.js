@@ -2,6 +2,7 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const STALE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_DAILY_NEW_TICKER_CAP = 25;
 const STOCK_CACHE_VERSION = "v2";
+const STOCK_CACHE_PREVIOUS_VERSIONS = ["v1"];
 
 const SEC_TICKER_URL = "https://www.sec.gov/files/company_tickers.json";
 const SEC_FACTS_BASE = "https://data.sec.gov/api/xbrl/companyfacts";
@@ -97,27 +98,63 @@ async function handleTrending(env) {
 async function handleStock(rawTicker, env, period) {
   if (!rawTicker) return jsonResponse({ error: "Ticker required" }, 400);
   const ticker = rawTicker.toUpperCase();
-  const cacheKey = `stock:${STOCK_CACHE_VERSION}:${ticker}:${period}`;
-  const cached = await getCache(env, cacheKey);
-  if (cached) return jsonResponse(cached);
+  const cacheKeys = getStockCacheKeys(ticker, period);
+  const primaryCacheKey = cacheKeys[0];
+
+  const cached = await getFirstCachedPayload(env, cacheKeys, false);
+  if (cached) {
+    if (cached.key !== primaryCacheKey) {
+      await putCache(env, primaryCacheKey, cached.payload);
+    }
+    return jsonResponse(cached.payload, 200, { "x-cache": "hit" });
+  }
 
   const cap = Number(env.DAILY_NEW_TICKER_CAP || DEFAULT_DAILY_NEW_TICKER_CAP);
   const allowed = await checkDailyCap(env, ticker, cap);
   if (!allowed) {
-    return jsonResponse({ error: "Daily ticker cap reached" }, 429);
+    const stale = await getFirstCachedPayload(env, cacheKeys, true);
+    if (stale) {
+      if (stale.key !== primaryCacheKey) {
+        await putCache(env, primaryCacheKey, stale.payload);
+      }
+      return jsonResponse(stale.payload, 200, { "x-cache": "stale" });
+    }
+    return jsonResponse({ error: "Daily ticker cap reached", cap }, 429);
   }
 
   try {
     const payload = await fetchStockData(ticker, env, period);
-    await putCache(env, cacheKey, payload);
+    await putCache(env, primaryCacheKey, payload);
     return jsonResponse(payload);
   } catch (err) {
-    const stale = await getCache(env, cacheKey, true);
+    const stale = await getFirstCachedPayload(env, cacheKeys, true);
     if (stale) {
-      return jsonResponse(stale, 200, { "x-cache": "stale" });
+      if (stale.key !== primaryCacheKey) {
+        await putCache(env, primaryCacheKey, stale.payload);
+      }
+      return jsonResponse(stale.payload, 200, { "x-cache": "stale" });
     }
     return jsonResponse({ error: err.message || "Unable to fetch data" }, 500);
   }
+}
+
+function getStockCacheKeys(ticker, period) {
+  const keys = [`stock:${STOCK_CACHE_VERSION}:${ticker}:${period}`];
+  for (const version of STOCK_CACHE_PREVIOUS_VERSIONS) {
+    keys.push(`stock:${version}:${ticker}:${period}`);
+  }
+  keys.push(`stock:${ticker}:${period}`);
+  return keys;
+}
+
+async function getFirstCachedPayload(env, keys, allowStale) {
+  for (const key of keys) {
+    const payload = await getCache(env, key, allowStale);
+    if (payload) {
+      return { key, payload };
+    }
+  }
+  return null;
 }
 
 async function handleSearch(rawQuery, env) {
