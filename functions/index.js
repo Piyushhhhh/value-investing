@@ -108,6 +108,30 @@ function ratio(num) {
   return Number(num.toFixed(2));
 }
 
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function average(values) {
+  if (!values.length) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function normalizeGrowthRate(rawRate, { fallback = 0.05, min = 0, max = 0.15 } = {}) {
+  if (rawRate === null || rawRate === undefined || Number.isNaN(rawRate)) return fallback;
+  return clamp(rawRate, min, max);
+}
+
+function computeGrahamFairValue({ eps, growthRate, currentPrice }) {
+  if (!eps || eps <= 0) return null;
+  const normalizedGrowth = normalizeGrowthRate(growthRate, { fallback: 0.05, min: 0, max: 0.15 });
+  const multiplier = 8.5 + 2 * (normalizedGrowth * 100);
+  const fairValue = eps * multiplier;
+  if (!Number.isFinite(fairValue) || fairValue <= 0) return null;
+  if (currentPrice && fairValue > currentPrice * 6) return null;
+  return Number(fairValue.toFixed(2));
+}
+
 function computeAltmanZ({
   workingCapital,
   retainedEarnings,
@@ -349,9 +373,32 @@ async function fetchStockData(ticker) {
     }
   }
 
+  const trailingNetIncome = earningsHistory
+    .slice(0, 3)
+    .map((row) => safeNumber(row.netIncome))
+    .filter((value) => value !== null && Number.isFinite(value) && value > 0);
+  const normalizedNetIncome = trailingNetIncome.length >= 2 ? average(trailingNetIncome) : null;
+
   const eps = netIncome && sharesOutstanding ? netIncome / sharesOutstanding : null;
-  const graham = eps ? eps * (8.5 + 2 * ((growthRate ?? 0.05) * 100)) : null;
-  const lynch = eps && growthRate ? eps * (growthRate * 100) : null;
+  const normalizedEps =
+    normalizedNetIncome !== null && sharesOutstanding ? normalizedNetIncome / sharesOutstanding : null;
+  const epsForValuation = normalizedEps ?? eps;
+
+  const graham = computeGrahamFairValue({
+    eps: epsForValuation,
+    growthRate,
+    currentPrice: price,
+  });
+
+  const lynchGrowth = normalizeGrowthRate(growthRate, {
+    fallback: null,
+    min: 0,
+    max: 0.25,
+  });
+  const lynch =
+    epsForValuation && lynchGrowth !== null
+      ? Number((epsForValuation * (lynchGrowth * 100)).toFixed(2))
+      : null;
 
   const impliedGrowth = impliedGrowthRate({
     freeCashFlow,
