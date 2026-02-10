@@ -479,6 +479,7 @@ button:hover {
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.88);
   gap: 0.45rem 0.8rem;
+  cursor: help;
 }
 
 .factor-row .factor-label {

@@ -22,6 +22,18 @@ const TRENDING = [
 ];
 
 const API_BASE = window.VALUE_CHECK_API_BASE || "";
+const FACTOR_DESCRIPTIONS = {
+  grossMargin: "Pricing power and product-level profitability.",
+  sgaEfficiency: "Operating overhead efficiency relative to revenue.",
+  rdReliance: "R&D spend intensity vs total revenue base.",
+  netMargin: "Bottom-line profitability after full cost stack.",
+  consistentEarnings: "Earnings durability across available filing years.",
+  interestCoverage: "Debt servicing capacity from operating profit.",
+  debtToEquity: "Financial leverage and capital structure risk.",
+  roe: "Return generated on shareholder equity capital.",
+  capexEfficiency: "Capital intensity of sustaining operations.",
+  dollarTest: "Value created per dollar of retained earnings.",
+};
 
 function formatValue(value, suffix = "") {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
@@ -743,10 +755,20 @@ function renderAnalyzer(data) {
   checks.forEach((check) => {
     const row = document.createElement("div");
     row.className = "table-row factor-row";
+    const factorHint = FACTOR_DESCRIPTIONS[check.key];
+    if (factorHint) {
+      row.title = factorHint;
+    }
 
     const label = document.createElement("div");
     label.className = "label-cell factor-label";
-    label.textContent = check.label;
+    const titleRow = document.createElement("div");
+    titleRow.className = "factor-title-row";
+    const title = document.createElement("span");
+    title.className = "factor-title";
+    title.textContent = check.label;
+    titleRow.appendChild(title);
+
     const provenance = data.provenance?.[check.key]?.sources;
     const sourceText = formatSourceList(provenance);
     if (sourceText) {
@@ -754,8 +776,9 @@ function renderAnalyzer(data) {
       badge.className = "source-badge";
       badge.textContent = "SEC";
       badge.title = sourceText;
-      label.appendChild(badge);
+      titleRow.appendChild(badge);
     }
+    label.appendChild(titleRow);
 
     const value = document.createElement("div");
     value.className = "factor-value";
