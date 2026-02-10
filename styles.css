@@ -690,16 +690,17 @@ button:hover {
 }
 
 .moat-item-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.4rem 0.6rem;
   margin-bottom: 0.35rem;
 }
 
 .moat-item-head strong {
   font-size: 0.88rem;
   color: #111827;
+  line-height: 1.25;
 }
 
 .moat-item p {
@@ -718,6 +719,7 @@ button:hover {
   padding: 0.15rem 0.45rem;
   border: 1px solid transparent;
   white-space: nowrap;
+  justify-self: end;
 }
 
 .moat-tone.good {
@@ -1022,6 +1024,19 @@ textarea {
 
   .snapshot-card strong {
     font-size: 1.3rem;
+  }
+
+  .moat-summary.moat-row {
+    grid-template-columns: 1fr;
+  }
+
+  .moat-item {
+    min-height: 0;
+  }
+
+  .moat-tone {
+    font-size: 0.64rem;
+    padding: 0.14rem 0.4rem;
   }
 
 }
