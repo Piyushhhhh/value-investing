@@ -766,13 +766,21 @@ function renderAnalyzer(data) {
     title.textContent = check.label;
     titleRow.appendChild(title);
     if (factorHint) {
-      const info = document.createElement("span");
+      const help = document.createElement("span");
+      help.className = "factor-help";
+
+      const info = document.createElement("button");
+      info.type = "button";
       info.className = "factor-info";
       info.textContent = "i";
-      info.setAttribute("role", "img");
-      info.setAttribute("aria-label", factorHint);
-      info.title = factorHint;
-      titleRow.appendChild(info);
+      info.setAttribute("aria-label", `About ${check.label}`);
+
+      const tooltip = document.createElement("span");
+      tooltip.className = "factor-tooltip";
+      tooltip.textContent = factorHint;
+
+      help.append(info, tooltip);
+      titleRow.appendChild(help);
     }
 
     const provenance = data.provenance?.[check.key]?.sources;

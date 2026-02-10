@@ -509,12 +509,45 @@ button:hover {
   border-radius: 999px;
   border: 1px solid rgba(10, 15, 31, 0.25);
   color: #5b6476;
+  background: white;
   font-size: 0.68rem;
   font-weight: 700;
   line-height: 1;
-  cursor: help;
+  cursor: pointer;
   flex: 0 0 auto;
   margin-left: 0.1rem;
+  padding: 0;
+}
+
+.factor-help {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.factor-tooltip {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  transform: translateX(-50%);
+  background: #111827;
+  color: white;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  width: min(280px, 55vw);
+  box-shadow: 0 12px 24px rgba(9, 12, 24, 0.25);
+  z-index: 20;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.factor-help:hover .factor-tooltip,
+.factor-help:focus-within .factor-tooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .factor-row .factor-value {
