@@ -14,6 +14,7 @@ let cachedKey = null;
 let cachedKeyAt = 0;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const DAILY_NEW_TICKER_CAP = 25;
+const STOCK_CACHE_VERSION = "v2";
 
 const TRENDING = [
   "AAPL",
@@ -448,7 +449,7 @@ async function fetchStockData(ticker) {
 }
 
 async function getStockPayload(ticker) {
-  const cacheKey = ticker.toUpperCase();
+  const cacheKey = `${STOCK_CACHE_VERSION}:${ticker.toUpperCase()}`;
   const cached = await loadFromCache("stock_cache", cacheKey);
   if (cached) return cached;
 

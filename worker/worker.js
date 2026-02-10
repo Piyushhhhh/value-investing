@@ -1,6 +1,7 @@
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const STALE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_DAILY_NEW_TICKER_CAP = 25;
+const STOCK_CACHE_VERSION = "v2";
 
 const SEC_TICKER_URL = "https://www.sec.gov/files/company_tickers.json";
 const SEC_FACTS_BASE = "https://data.sec.gov/api/xbrl/companyfacts";
@@ -96,7 +97,7 @@ async function handleTrending(env) {
 async function handleStock(rawTicker, env, period) {
   if (!rawTicker) return jsonResponse({ error: "Ticker required" }, 400);
   const ticker = rawTicker.toUpperCase();
-  const cacheKey = `stock:${ticker}:${period}`;
+  const cacheKey = `stock:${STOCK_CACHE_VERSION}:${ticker}:${period}`;
   const cached = await getCache(env, cacheKey);
   if (cached) return jsonResponse(cached);
 
