@@ -1,8 +1,9 @@
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const STALE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_DAILY_NEW_TICKER_CAP = 25;
-const STOCK_CACHE_VERSION = "v2";
-const STOCK_CACHE_PREVIOUS_VERSIONS = ["v1"];
+const NEW_FILING_WINDOW_DAYS = 45;
+const STOCK_CACHE_VERSION = "v3";
+const STOCK_CACHE_PREVIOUS_VERSIONS = ["v2", "v1"];
 
 const SEC_TICKER_URL = "https://www.sec.gov/files/company_tickers.json";
 const SEC_FACTS_BASE = "https://data.sec.gov/api/xbrl/companyfacts";
@@ -381,6 +382,87 @@ async function fetchStockData(ticker, env, period) {
   const roe = netIncome && totalEquity ? toPercent(netIncome / totalEquity) : null;
   const capexEfficiency = operatingCashFlow && capex ? toPercent(Math.abs(capex) / Math.abs(operatingCashFlow)) : null;
 
+  const revenuePrev = convert(seriesValueAt(revenueSeries, 1));
+  const grossProfitPrev = convert(seriesValueAt(grossProfitSeries, 1));
+  const netIncomePrev = convert(seriesValueAt(netIncomeSeries, 1));
+  const ebitPrev = convert(seriesValueAt(ebitSeries, 1));
+  const interestExpensePrev = convert(seriesValueAt(interestSeries, 1));
+  const equityPrev = convert(seriesValueAt(equitySeries, 1));
+  const longDebtPrev = convert(seriesValueAt(longDebtSeries, 1));
+  const shortDebtPrev = convert(seriesValueAt(shortDebtSeries, 1));
+  const operatingCashFlowPrev = convert(seriesValueAt(operatingCashFlowSeries, 1));
+  const capexPrev = convert(seriesValueAt(capexSeries, 1));
+
+  const grossMarginPrev =
+    revenuePrev && grossProfitPrev ? toPercent(grossProfitPrev / revenuePrev) : null;
+  const netMarginPrev =
+    revenuePrev && netIncomePrev ? toPercent(netIncomePrev / revenuePrev) : null;
+  const interestCoveragePrev =
+    ebitPrev && interestExpensePrev
+      ? toRatio(Math.abs(ebitPrev) / Math.abs(interestExpensePrev))
+      : null;
+  const totalDebtPrev = sumNumbers(longDebtPrev, shortDebtPrev);
+  const debtToEquityPrev =
+    totalDebtPrev && equityPrev ? toRatio(totalDebtPrev / equityPrev) : null;
+  const roePrev =
+    netIncomePrev && equityPrev ? toPercent(netIncomePrev / equityPrev) : null;
+  const capexEfficiencyPrev =
+    operatingCashFlowPrev && capexPrev
+      ? toPercent(Math.abs(capexPrev) / Math.abs(operatingCashFlowPrev))
+      : null;
+
+  const filingSummary = getFilingSummary(submissions, period);
+  const filingMetrics = [
+    buildMetricDelta({
+      key: "grossMargin",
+      label: "Gross Margin",
+      unit: "percent",
+      better: "higher",
+      current: grossMargin,
+      previous: grossMarginPrev,
+    }),
+    buildMetricDelta({
+      key: "netMargin",
+      label: "Net Margin",
+      unit: "percent",
+      better: "higher",
+      current: netMargin,
+      previous: netMarginPrev,
+    }),
+    buildMetricDelta({
+      key: "roe",
+      label: "ROE",
+      unit: "percent",
+      better: "higher",
+      current: roe,
+      previous: roePrev,
+    }),
+    buildMetricDelta({
+      key: "debtToEquity",
+      label: "Debt / Equity",
+      unit: "ratio",
+      better: "lower",
+      current: debtToEquity,
+      previous: debtToEquityPrev,
+    }),
+    buildMetricDelta({
+      key: "interestCoverage",
+      label: "Interest Coverage",
+      unit: "ratio",
+      better: "higher",
+      current: interestCoverage,
+      previous: interestCoveragePrev,
+    }),
+    buildMetricDelta({
+      key: "capexEfficiency",
+      label: "Capex Efficiency",
+      unit: "percent",
+      better: "lower",
+      current: capexEfficiency,
+      previous: capexEfficiencyPrev,
+    }),
+  ].filter(Boolean);
+
   const yearsAvailable = netIncomeSeries.length;
   const profitableYears = netIncomeSeries.filter((row) => toNumber(row.val) > 0).length;
 
@@ -576,6 +658,14 @@ async function fetchStockData(ticker, env, period) {
       freeCashFlow,
       marketCap,
     },
+    filingDelta: {
+      period,
+      latest: filingSummary.latest,
+      previous: filingSummary.previous,
+      isNew: filingSummary.isNew,
+      daysSinceLatestFiled: filingSummary.daysSinceLatestFiled,
+      metrics: filingMetrics,
+    },
     provenance,
     valuation: {
       dcf: {
@@ -638,6 +728,100 @@ async function fetchSubmissions(cik, env) {
   const data = await secFetchJson(`${SEC_SUBMISSIONS_BASE}${cik}.json`, env);
   await putCache(env, cacheKey, data);
   return data;
+}
+
+function parseDateMs(value) {
+  if (!value) return 0;
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
+function extractRecentFilings(submissions, period) {
+  const recent = submissions?.filings?.recent;
+  const forms = Array.isArray(recent?.form) ? recent.form : [];
+  const formSet = period === "quarterly" ? QUARTERLY_FORMS : ANNUAL_FORMS;
+  const filings = [];
+
+  for (let i = 0; i < forms.length; i += 1) {
+    const form = forms[i];
+    if (!formSet.has(form)) continue;
+    filings.push({
+      form,
+      filed: recent?.filingDate?.[i] || null,
+      reportDate: recent?.reportDate?.[i] || null,
+      acceptance: recent?.acceptanceDateTime?.[i] || null,
+      accession: recent?.accessionNumber?.[i] || null,
+      fy: recent?.fy?.[i] || null,
+      fp: recent?.fp?.[i] || null,
+    });
+  }
+
+  filings.sort((a, b) => {
+    const aMs = parseDateMs(a.filed || a.acceptance);
+    const bMs = parseDateMs(b.filed || b.acceptance);
+    return bMs - aMs;
+  });
+  return filings;
+}
+
+function getFilingSummary(submissions, period) {
+  const filings = extractRecentFilings(submissions, period);
+  const latest = filings[0] || null;
+  const previous = filings[1] || null;
+  if (!latest) {
+    return {
+      latest: null,
+      previous: null,
+      isNew: false,
+      daysSinceLatestFiled: null,
+    };
+  }
+
+  const filedMs = parseDateMs(latest.filed);
+  const daysSinceLatestFiled =
+    filedMs > 0 ? Math.floor((Date.now() - filedMs) / (24 * 60 * 60 * 1000)) : null;
+  const isNew =
+    daysSinceLatestFiled !== null &&
+    daysSinceLatestFiled >= 0 &&
+    daysSinceLatestFiled <= NEW_FILING_WINDOW_DAYS;
+
+  return {
+    latest,
+    previous,
+    isNew,
+    daysSinceLatestFiled,
+  };
+}
+
+function round(value, digits = 2) {
+  if (value === null || value === undefined || Number.isNaN(value)) return null;
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
+}
+
+function buildMetricDelta({ key, label, unit, better, current, previous }) {
+  const hasCurrent = current !== null && current !== undefined && Number.isFinite(current);
+  const hasPrevious = previous !== null && previous !== undefined && Number.isFinite(previous);
+  if (!hasCurrent && !hasPrevious) return null;
+
+  const digits = unit === "percent" ? 1 : 2;
+  const delta =
+    hasCurrent && hasPrevious ? round(current - previous, digits) : null;
+  const deltaPct =
+    delta !== null && previous !== 0
+      ? round(((delta / Math.abs(previous)) * 100), 1)
+      : null;
+
+  return {
+    key,
+    label,
+    unit,
+    better,
+    current: hasCurrent ? round(current, digits) : null,
+    previous: hasPrevious ? round(previous, digits) : null,
+    delta,
+    deltaPct,
+  };
 }
 
 function fillPeerFallback(peers, ticker) {
@@ -784,6 +968,11 @@ function latestValue(series) {
   return toNumber(series[0].val);
 }
 
+function seriesValueAt(series, index = 0) {
+  if (!series || series.length <= index) return null;
+  return toNumber(series[index].val);
+}
+
 function latestItem(series) {
   if (!series || !series.length) return null;
   return series[0];
@@ -795,6 +984,7 @@ function sourceFrom(selection, item) {
     tag: selection.tag,
     unit: selection.unit || null,
     end: item.end || null,
+    filed: item.filed || null,
     fy: item.fy || null,
     form: item.form || null,
     val: item.val ?? null,

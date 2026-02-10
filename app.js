@@ -70,6 +70,28 @@ function formatRatio(value) {
   return value.toFixed(2);
 }
 
+function formatDateValue(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toISOString().slice(0, 10);
+}
+
+function formatDeltaMetricValue(metric, value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  if (metric.unit === "percent") return `${value.toFixed(1)}%`;
+  return value.toFixed(2);
+}
+
+function formatDeltaChange(metric) {
+  if (metric.delta === null || metric.delta === undefined || Number.isNaN(metric.delta)) {
+    return "No delta";
+  }
+  const signed = metric.delta > 0 ? `+${metric.delta}` : `${metric.delta}`;
+  if (metric.unit === "percent") return `${signed}pp`;
+  return signed;
+}
+
 function generateMoatSignals(data) {
   const { metrics, snapshots } = data;
   const gm = metrics.grossMargin;
@@ -251,6 +273,14 @@ function emptyData(ticker = "") {
       shareholderYield: null,
       solvency: "Unknown",
       altmanZ: null,
+    },
+    filingDelta: {
+      period: "annual",
+      latest: null,
+      previous: null,
+      isNew: false,
+      daysSinceLatestFiled: null,
+      metrics: [],
     },
     valuation: {
       dcf: { low: null, base: null, high: null },
@@ -747,6 +777,89 @@ function renderHomeHero(data) {
     : "Run a check to see a score";
 }
 
+function renderFilingDelta(data) {
+  const status = $("filing-status");
+  const subtitle = $("filing-subtitle");
+  const meta = $("filing-meta");
+  const grid = $("filing-deltas");
+  if (!status || !subtitle || !meta || !grid) return;
+
+  const filing = data.filingDelta || {};
+  const latest = filing.latest;
+  const previous = filing.previous;
+  const metrics = Array.isArray(filing.metrics) ? filing.metrics : [];
+
+  if (!latest) {
+    status.textContent = "No recent filing";
+    status.classList.remove("is-new");
+    subtitle.textContent = "Latest 10-K/10-Q changes vs previous filing.";
+    meta.innerHTML = "";
+    grid.innerHTML = `<div class="filing-empty">No 10-K/10-Q filing data found yet.</div>`;
+    return;
+  }
+
+  status.textContent = filing.isNew ? "New filing detected" : "Latest filing tracked";
+  status.classList.toggle("is-new", Boolean(filing.isNew));
+  subtitle.textContent = "Deltas compare latest filing against the previous filing in the same cycle.";
+
+  const latestLine = `${latest.form || "Filing"} filed ${formatDateValue(latest.filed)}`;
+  const previousLine = previous
+    ? `${previous.form || "Filing"} filed ${formatDateValue(previous.filed)}`
+    : "Previous filing unavailable";
+  const ageLine =
+    filing.daysSinceLatestFiled === null || filing.daysSinceLatestFiled === undefined
+      ? "Filing age unavailable"
+      : `${filing.daysSinceLatestFiled} day${filing.daysSinceLatestFiled === 1 ? "" : "s"} ago`;
+
+  meta.innerHTML = `
+    <span class="filing-chip">${latestLine}</span>
+    <span class="filing-chip">${previousLine}</span>
+    <span class="filing-chip">${ageLine}</span>
+  `;
+
+  if (!metrics.length) {
+    grid.innerHTML = `<div class="filing-empty">Need two filings to calculate metric deltas.</div>`;
+    return;
+  }
+
+  grid.innerHTML = "";
+  metrics.forEach((metric) => {
+    const hasCurrent =
+      metric.current !== null &&
+      metric.current !== undefined &&
+      Number.isFinite(metric.current);
+    const hasPrevious =
+      metric.previous !== null &&
+      metric.previous !== undefined &&
+      Number.isFinite(metric.previous);
+    const hasDelta = metric.delta !== null && metric.delta !== undefined && Number.isFinite(metric.delta);
+    let tone = "neutral";
+    if (hasDelta) {
+      const isBetter =
+        metric.better === "higher" ? metric.delta > 0 : metric.delta < 0;
+      const isWorse =
+        metric.better === "higher" ? metric.delta < 0 : metric.delta > 0;
+      tone = isBetter ? "good" : isWorse ? "bad" : "neutral";
+    }
+
+    const card = document.createElement("article");
+    card.className = "filing-card";
+    card.innerHTML = `
+      <div class="filing-card-head">
+        <strong>${metric.label}</strong>
+        <span class="filing-delta-tone ${tone}">
+          ${hasDelta ? formatDeltaChange(metric) : hasCurrent || hasPrevious ? "No delta" : "No data"}
+        </span>
+      </div>
+      <p class="filing-card-values">
+        <span>Now: ${formatDeltaMetricValue(metric, metric.current)}</span>
+        <span>Prev: ${formatDeltaMetricValue(metric, metric.previous)}</span>
+      </p>
+    `;
+    grid.appendChild(card);
+  });
+}
+
 function renderAnalyzer(data) {
   const name = data.name ? `${data.name} (${data.ticker})` : data.ticker || "Analyzer";
   $("analyzer-title").textContent = `${name} · Analyzer`;
@@ -858,6 +971,7 @@ function renderAnalyzer(data) {
   if (checklistMeta) checklistMeta.textContent = signalLabel;
 
   $("to-valuation").onclick = () => goTo("valuation", data.ticker);
+  renderFilingDelta(data);
   renderPeers(data);
 
   const moat = $("moat-summary");

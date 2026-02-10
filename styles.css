@@ -429,6 +429,100 @@ button:hover {
   margin-bottom: 1rem;
 }
 
+.filing-panel {
+  margin-bottom: 1rem;
+}
+
+#filing-status.is-new {
+  color: #0b8b49;
+  font-weight: 700;
+}
+
+.filing-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.filing-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(10, 15, 31, 0.14);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.25rem 0.6rem;
+  font-size: 0.76rem;
+  color: #394457;
+}
+
+.filing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.filing-card {
+  border: 1px solid rgba(10, 15, 31, 0.1);
+  background: #fff9ef;
+  border-radius: 14px;
+  padding: 0.65rem 0.75rem;
+}
+
+.filing-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.filing-card-head strong {
+  font-size: 0.9rem;
+}
+
+.filing-card-values {
+  margin: 0.45rem 0 0;
+  display: grid;
+  gap: 0.14rem;
+  color: #3f4a5e;
+  font-size: 0.82rem;
+}
+
+.filing-delta-tone {
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.14rem 0.45rem;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.filing-delta-tone.good {
+  color: #0b8b49;
+  background: rgba(11, 139, 73, 0.12);
+  border-color: rgba(11, 139, 73, 0.24);
+}
+
+.filing-delta-tone.bad {
+  color: #cc2b2b;
+  background: rgba(204, 43, 43, 0.12);
+  border-color: rgba(204, 43, 43, 0.24);
+}
+
+.filing-delta-tone.neutral {
+  color: #475467;
+  background: rgba(71, 84, 103, 0.12);
+  border-color: rgba(71, 84, 103, 0.2);
+}
+
+.filing-empty {
+  border: 1px dashed rgba(10, 15, 31, 0.2);
+  border-radius: 14px;
+  padding: 0.65rem 0.8rem;
+  color: #5b6476;
+  font-size: 0.88rem;
+}
+
 .panel {
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--stroke);
@@ -1109,6 +1203,10 @@ textarea {
   .moat-summary.moat-row {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .filing-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1024px) {
@@ -1126,6 +1224,10 @@ textarea {
 
   .moat-summary.moat-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filing-grid {
+    grid-template-columns: 1fr;
   }
 
   .page-head {
