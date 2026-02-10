@@ -755,10 +755,7 @@ function renderAnalyzer(data) {
   checks.forEach((check) => {
     const row = document.createElement("div");
     row.className = "table-row factor-row";
-    const factorHint = FACTOR_DESCRIPTIONS[check.key];
-    if (factorHint) {
-      row.title = factorHint;
-    }
+    const factorHint = FACTOR_DESCRIPTIONS[check.key] || "";
 
     const label = document.createElement("div");
     label.className = "label-cell factor-label";
@@ -768,6 +765,15 @@ function renderAnalyzer(data) {
     title.className = "factor-title";
     title.textContent = check.label;
     titleRow.appendChild(title);
+    if (factorHint) {
+      const info = document.createElement("span");
+      info.className = "factor-info";
+      info.textContent = "i";
+      info.setAttribute("role", "img");
+      info.setAttribute("aria-label", factorHint);
+      info.title = factorHint;
+      titleRow.appendChild(info);
+    }
 
     const provenance = data.provenance?.[check.key]?.sources;
     const sourceText = formatSourceList(provenance);

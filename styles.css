@@ -479,12 +479,42 @@ button:hover {
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.88);
   gap: 0.45rem 0.8rem;
-  cursor: help;
 }
 
 .factor-row .factor-label {
   grid-area: label;
   min-height: 1.4rem;
+  width: 100%;
+}
+
+.factor-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.factor-title {
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.factor-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(10, 15, 31, 0.25);
+  color: #5b6476;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+  flex: 0 0 auto;
+  margin-left: 0.1rem;
 }
 
 .factor-row .factor-value {
@@ -514,6 +544,8 @@ button:hover {
   background: rgba(47, 107, 255, 0.12);
   color: #1f3bbd;
   border: 1px solid rgba(47, 107, 255, 0.25);
+  margin-left: auto;
+  flex: 0 0 auto;
 }
 
 .table-row .result {
