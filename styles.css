@@ -831,6 +831,132 @@ textarea {
   color: var(--muted);
 }
 
+.method-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+  gap: 1rem;
+  align-items: start;
+  margin-bottom: 1rem;
+}
+
+.method-main {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.method-intro h2 {
+  font-size: clamp(1.8rem, 2.3vw, 2.35rem);
+  line-height: 1.1;
+  margin-bottom: 0.7rem;
+}
+
+.method-intro p {
+  margin: 0;
+  color: #343d4f;
+  font-size: 1.03rem;
+  max-width: 72ch;
+}
+
+.method-section h3 {
+  margin-bottom: 0.7rem;
+  font-size: 1.28rem;
+}
+
+.method-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.method-metrics--single {
+  grid-template-columns: 1fr;
+}
+
+.method-metric {
+  border: 1px solid rgba(10, 15, 31, 0.12);
+  border-radius: 14px;
+  background: #fffdf8;
+  padding: 0.8rem 0.9rem;
+}
+
+.method-metric h4 {
+  margin: 0 0 0.35rem;
+  font-size: 1.04rem;
+  line-height: 1.25;
+}
+
+.method-metric p {
+  margin: 0;
+  color: #374152;
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
+.method-metric blockquote {
+  margin: 0.7rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(47, 107, 255, 0.08);
+  border: 1px solid rgba(47, 107, 255, 0.18);
+  font-size: 0.92rem;
+  color: #273452;
+}
+
+.method-side {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.method-side-panel h3 {
+  margin-bottom: 0.7rem;
+}
+
+.book-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.book-item {
+  border: 1px solid rgba(10, 15, 31, 0.12);
+  border-radius: 12px;
+  padding: 0.65rem 0.75rem;
+  background: #fffdf8;
+}
+
+.book-meta h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.book-meta p {
+  margin: 0.2rem 0 0;
+  font-size: 0.9rem;
+  color: #4d576b;
+}
+
+.method-side-panel .primary {
+  margin-top: 0.2rem;
+}
+
+.legal-note {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  margin-top: 0.8rem;
+}
+
+.method-disclaimer {
+  font-size: 0.9rem;
+}
+
+.method-disclaimer p {
+  margin: 0;
+  color: #394457;
+}
+
+.method-disclaimer p + p {
+  margin-top: 0.55rem;
+}
+
 .footer {
   display: flex;
   justify-content: space-between;
@@ -988,6 +1114,14 @@ textarea {
   }
 
   .table.table--factor {
+    grid-template-columns: 1fr;
+  }
+
+  .method-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .method-metrics {
     grid-template-columns: 1fr;
   }
 }
