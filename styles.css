@@ -1406,9 +1406,24 @@ textarea {
 .footer {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 2rem 6vw;
   border-top: 1px solid var(--stroke);
   background: rgba(246, 242, 233, 0.88);
+}
+
+.footer-links {
+  display: flex;
+  gap: 1rem;
+}
+
+.footer-links a {
+  color: #3c4252;
+  font-weight: 600;
+}
+
+.footer-links a:hover {
+  color: #111827;
 }
 
 .error-banner {
