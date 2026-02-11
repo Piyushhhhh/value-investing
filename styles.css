@@ -350,6 +350,61 @@ a {
   padding: 1rem;
 }
 
+.lab-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.lab-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid rgba(10, 15, 31, 0.14);
+  border-radius: 999px;
+  padding: 0.2rem;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.lab-mode-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  background: transparent;
+  color: #394457;
+  font-weight: 700;
+  font-size: 0.82rem;
+  box-shadow: none;
+}
+
+.lab-mode-btn:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.lab-mode-btn.is-active {
+  background: #111827;
+  color: #f9fafb;
+}
+
+.lab-presets {
+  margin-top: 0.45rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.lab-preset-btn {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 12px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
 .lab-inputs {
   margin-top: 0.7rem;
   display: grid;
@@ -371,14 +426,34 @@ a {
   color: var(--muted);
 }
 
-.lab-control strong {
-  font-family: "Bricolage Grotesque", sans-serif;
-  font-size: 1rem;
+.lab-control-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.lab-control-head input {
+  width: 100%;
+  border: 1px solid rgba(10, 15, 31, 0.16);
+  border-radius: 10px;
+  padding: 0.28rem 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #111827;
+  background: rgba(255, 255, 255, 0.96);
+  text-align: right;
 }
 
 .lab-control input[type="range"] {
   width: 100%;
   accent-color: #2f6bff;
+}
+
+.lab-help {
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: #556074;
 }
 
 .lab-cards {
@@ -450,6 +525,25 @@ a {
   color: #384254;
   font-size: 0.9rem;
   background: rgba(255, 255, 255, 0.86);
+}
+
+.lab-guidance {
+  margin-top: 0.6rem;
+  border: 1px solid rgba(10, 15, 31, 0.12);
+  border-radius: 12px;
+  background: rgba(248, 250, 255, 0.75);
+  padding: 0.55rem 0.7rem;
+}
+
+.lab-guidance p {
+  margin: 0;
+  color: #3e4a60;
+  font-size: 0.83rem;
+  line-height: 1.42;
+}
+
+.lab-guidance p + p {
+  margin-top: 0.3rem;
 }
 
 button {
@@ -1557,6 +1651,33 @@ textarea {
 
   .lab-search-row {
     grid-template-columns: 1fr;
+  }
+
+  .lab-head-row {
+    align-items: stretch;
+  }
+
+  .lab-mode {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .lab-mode-btn {
+    flex: 1;
+  }
+
+  .lab-presets {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lab-preset-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .lab-control-head {
+    grid-template-columns: minmax(0, 1fr) 92px;
   }
 }
 

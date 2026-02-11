@@ -41,6 +41,20 @@ const LAB_SCENARIO_TWEAKS = {
   bull: { growthDelta: 4, discountDelta: -1.5, peMultiplier: 1.2 },
 };
 
+const LAB_FIELDS = {
+  eps: { rangeId: "lab-eps", numberId: "lab-eps-num", min: 0.5, max: 30, step: 0.1, digits: 2 },
+  growth: { rangeId: "lab-growth", numberId: "lab-growth-num", min: -10, max: 30, step: 0.1, digits: 1 },
+  discount: { rangeId: "lab-discount", numberId: "lab-discount-num", min: 4, max: 20, step: 0.1, digits: 1 },
+  pe: { rangeId: "lab-pe", numberId: "lab-pe-num", min: 6, max: 40, step: 0.1, digits: 1 },
+  payout: { rangeId: "lab-payout", numberId: "lab-payout-num", min: 0, max: 80, step: 1, digits: 0 },
+  years: { rangeId: "lab-years", numberId: "lab-years-num", min: 3, max: 12, step: 1, digits: 0 },
+};
+
+const LAB_PRESET_FACTORS = {
+  conservative: { growthDelta: -3, discountDelta: 1.5, peMultiplier: 0.85, payoutDelta: -5 },
+  optimistic: { growthDelta: 3, discountDelta: -1, peMultiplier: 1.15, payoutDelta: 5 },
+};
+
 function formatValue(value, suffix = "") {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   return `${value}${suffix}`;
@@ -332,6 +346,7 @@ const state = {
   },
   lab: {
     initializedForTicker: "",
+    mode: "fair",
     assumptions: {
       eps: 5,
       growth: 8,
@@ -636,27 +651,73 @@ function defaultLabAssumptions(data) {
   const payout = clamp(20, 0, 80);
   const years = 7;
 
-  return { eps, growth, discount, pe, payout, years };
+  return normalizeLabAssumptions({ eps, growth, discount, pe, payout, years });
 }
 
-function calculateLabScenario(assumptions, scenarioTweak, currentPrice) {
-  const growth = clamp(assumptions.growth + scenarioTweak.growthDelta, -20, 40);
-  const discount = clamp(assumptions.discount + scenarioTweak.discountDelta, 4, 30);
-  const pe = clamp(assumptions.pe * scenarioTweak.peMultiplier, 4, 60);
-  const payout = clamp(assumptions.payout, 0, 95);
-  const years = Math.round(clamp(assumptions.years, 3, 12));
+function normalizeLabAssumptions(rawAssumptions) {
+  const next = { ...rawAssumptions };
+  Object.entries(LAB_FIELDS).forEach(([key, config]) => {
+    const numeric = Number(next[key]);
+    next[key] = Number.isFinite(numeric) ? clamp(numeric, config.min, config.max) : config.min;
+    if (config.step >= 1) next[key] = Math.round(next[key]);
+  });
+  return next;
+}
 
-  let eps = Math.max(0.01, assumptions.eps);
+function calculateLabFairValue(input) {
+  const growth = input.growth;
+  const discount = input.discount;
+  const pe = input.pe;
+  const payout = input.payout;
+  const years = Math.round(input.years);
+  let eps = Math.max(0.01, input.eps);
   let pvDividends = 0;
   for (let year = 1; year <= years; year += 1) {
     eps *= 1 + growth / 100;
     const dividend = eps * (payout / 100);
     pvDividends += dividend / Math.pow(1 + discount / 100, year);
   }
-
   const terminalValue = eps * pe;
   const discountedTerminal = terminalValue / Math.pow(1 + discount / 100, years);
-  const fairValue = Math.max(0, pvDividends + discountedTerminal);
+  return Math.max(0, pvDividends + discountedTerminal);
+}
+
+function solveRequiredGrowth(input, targetPrice) {
+  if (!Number.isFinite(targetPrice) || targetPrice <= 0) {
+    return { growth: null, status: "no-price" };
+  }
+  let low = -40;
+  let high = 80;
+  const baseInput = { ...input };
+  const lowValue = calculateLabFairValue({ ...baseInput, growth: low });
+  const highValue = calculateLabFairValue({ ...baseInput, growth: high });
+
+  if (targetPrice < lowValue) return { growth: low, status: "below-range" };
+  if (targetPrice > highValue) return { growth: high, status: "above-range" };
+
+  for (let i = 0; i < 42; i += 1) {
+    const mid = (low + high) / 2;
+    const midValue = calculateLabFairValue({ ...baseInput, growth: mid });
+    if (midValue < targetPrice) low = mid;
+    else high = mid;
+  }
+  return { growth: (low + high) / 2, status: "ok" };
+}
+
+function calculateLabScenario(assumptions, scenarioTweak, currentPrice) {
+  const growth = clamp(assumptions.growth + scenarioTweak.growthDelta, -40, 80);
+  const discount = clamp(assumptions.discount + scenarioTweak.discountDelta, 4, 30);
+  const pe = clamp(assumptions.pe * scenarioTweak.peMultiplier, 4, 60);
+  const payout = clamp(assumptions.payout, 0, 95);
+  const years = Math.round(clamp(assumptions.years, 3, 12));
+  const fairValue = calculateLabFairValue({
+    eps: assumptions.eps,
+    growth,
+    discount,
+    pe,
+    payout,
+    years,
+  });
   const mos =
     Number.isFinite(currentPrice) && currentPrice > 0
       ? ((fairValue - currentPrice) / currentPrice) * 100
@@ -665,58 +726,57 @@ function calculateLabScenario(assumptions, scenarioTweak, currentPrice) {
   return { fairValue, mos, growth, discount, pe, years };
 }
 
-function syncLabValueLabels() {
-  const assumptions = state.lab.assumptions;
-  const pairs = [
-    ["lab-eps-value", `$${assumptions.eps.toFixed(2)}`],
-    ["lab-growth-value", `${assumptions.growth.toFixed(1)}%`],
-    ["lab-discount-value", `${assumptions.discount.toFixed(1)}%`],
-    ["lab-pe-value", `${assumptions.pe.toFixed(1)}x`],
-    ["lab-payout-value", `${assumptions.payout.toFixed(0)}%`],
-    ["lab-years-value", `${Math.round(assumptions.years)}y`],
-  ];
-
-  pairs.forEach(([id, value]) => {
-    const node = $(id);
-    if (node) node.textContent = value;
-  });
-}
-
 function applyLabAssumptionsToInputs() {
   const assumptions = state.lab.assumptions;
-  const mapping = {
-    "lab-eps": assumptions.eps,
-    "lab-growth": assumptions.growth,
-    "lab-discount": assumptions.discount,
-    "lab-pe": assumptions.pe,
-    "lab-payout": assumptions.payout,
-    "lab-years": Math.round(assumptions.years),
-  };
-  Object.entries(mapping).forEach(([id, value]) => {
-    const input = $(id);
-    if (!input) return;
-    input.value = String(value);
+  Object.entries(LAB_FIELDS).forEach(([key, config]) => {
+    const value = assumptions[key];
+    const range = $(config.rangeId);
+    const number = $(config.numberId);
+    const output =
+      config.step >= 1
+        ? String(Math.round(value))
+        : value.toFixed(config.digits);
+    if (range) range.value = output;
+    if (number) number.value = output;
   });
-  syncLabValueLabels();
 }
 
-function readLabAssumptionsFromInputs() {
-  const read = (id, fallback) => {
-    const input = $(id);
-    if (!input) return fallback;
-    const parsed = Number(input.value);
-    return Number.isFinite(parsed) ? parsed : fallback;
-  };
+function updateLabField(fieldKey, rawValue) {
+  const config = LAB_FIELDS[fieldKey];
+  if (!config) return;
+  const parsed = Number(rawValue);
+  if (!Number.isFinite(parsed)) return;
+  let next = clamp(parsed, config.min, config.max);
+  if (config.step >= 1) next = Math.round(next);
+  state.lab.assumptions[fieldKey] = next;
+  applyLabAssumptionsToInputs();
+}
 
-  state.lab.assumptions = {
-    eps: read("lab-eps", state.lab.assumptions.eps),
-    growth: read("lab-growth", state.lab.assumptions.growth),
-    discount: read("lab-discount", state.lab.assumptions.discount),
-    pe: read("lab-pe", state.lab.assumptions.pe),
-    payout: read("lab-payout", state.lab.assumptions.payout),
-    years: read("lab-years", state.lab.assumptions.years),
-  };
-  syncLabValueLabels();
+function applyLabPreset(kind) {
+  const baseline = defaultLabAssumptions(state.data);
+  if (kind === "base" || kind === "reset") {
+    state.lab.assumptions = baseline;
+    applyLabAssumptionsToInputs();
+    return;
+  }
+  const preset = LAB_PRESET_FACTORS[kind];
+  if (!preset) return;
+  state.lab.assumptions = normalizeLabAssumptions({
+    ...baseline,
+    growth: baseline.growth + preset.growthDelta,
+    discount: baseline.discount + preset.discountDelta,
+    pe: baseline.pe * preset.peMultiplier,
+    payout: baseline.payout + preset.payoutDelta,
+  });
+  applyLabAssumptionsToInputs();
+}
+
+function setLabMode(mode) {
+  state.lab.mode = mode === "implied" ? "implied" : "fair";
+  const fairBtn = $("lab-mode-fair");
+  const impliedBtn = $("lab-mode-implied");
+  if (fairBtn) fairBtn.classList.toggle("is-active", state.lab.mode === "fair");
+  if (impliedBtn) impliedBtn.classList.toggle("is-active", state.lab.mode === "implied");
 }
 
 function ensureLabDefaultsForTicker(data) {
@@ -1180,9 +1240,12 @@ function renderAnalyzer(data) {
 function renderLab(data) {
   ensureLabDefaultsForTicker(data);
   applyLabAssumptionsToInputs();
+  setLabMode(state.lab.mode);
 
   const company = $("lab-company");
   const priceEl = $("lab-price");
+  const assumptionSubtitle = $("lab-assumption-subtitle");
+  const resultSubtitle = $("lab-results-subtitle");
   if (company) {
     if (data?.ticker) {
       company.textContent = data.name ? `${data.name} (${data.ticker})` : data.ticker;
@@ -1195,13 +1258,8 @@ function renderLab(data) {
   }
 
   const currentPrice = Number.isFinite(data?.price) ? data.price : null;
-  const scenarios = {
-    bear: calculateLabScenario(state.lab.assumptions, LAB_SCENARIO_TWEAKS.bear, currentPrice),
-    base: calculateLabScenario(state.lab.assumptions, LAB_SCENARIO_TWEAKS.base, currentPrice),
-    bull: calculateLabScenario(state.lab.assumptions, LAB_SCENARIO_TWEAKS.bull, currentPrice),
-  };
 
-  const setScenarioUI = (name, scenario) => {
+  const setScenarioUIFair = (name, scenario) => {
     const valueNode = $(`lab-${name}-value`);
     const mosNode = $(`lab-${name}-mos`);
     const noteNode = $(`lab-${name}-note`);
@@ -1221,24 +1279,114 @@ function renderLab(data) {
     }
   };
 
-  setScenarioUI("bear", scenarios.bear);
-  setScenarioUI("base", scenarios.base);
-  setScenarioUI("bull", scenarios.bull);
+  const setScenarioUIImplied = (name, scenario) => {
+    const valueNode = $(`lab-${name}-value`);
+    const mosNode = $(`lab-${name}-mos`);
+    const noteNode = $(`lab-${name}-note`);
+    if (valueNode) {
+      if (scenario.status === "ok" || scenario.status === "below-range" || scenario.status === "above-range") {
+        const prefix = scenario.status === "below-range" ? "<" : scenario.status === "above-range" ? ">" : "";
+        valueNode.textContent = `${prefix}${scenario.growth.toFixed(1)}%`;
+      } else {
+        valueNode.textContent = "N/A";
+      }
+    }
+    if (mosNode) {
+      mosNode.className = "";
+      mosNode.textContent = scenario.status === "no-price" ? "No price" : "At market";
+    }
+    if (noteNode) {
+      const stateText =
+        scenario.status === "below-range"
+          ? "required growth below solver floor"
+          : scenario.status === "above-range"
+            ? "required growth above solver cap"
+            : scenario.status === "no-price"
+              ? "load a ticker with market price"
+              : `r ${scenario.discount.toFixed(1)}% · exit ${scenario.pe.toFixed(1)}x`;
+      noteNode.textContent = stateText;
+    }
+  };
 
   const summary = $("lab-summary");
+
+  if (state.lab.mode === "implied") {
+    if (assumptionSubtitle) {
+      assumptionSubtitle.textContent =
+        "Required Growth mode solves the growth rate needed to justify current price with your discount, payout, and exit multiple assumptions.";
+    }
+    if (resultSubtitle) {
+      resultSubtitle.textContent =
+        "Each scenario changes discount and exit multiple, then solves the growth required to match today's price.";
+    }
+
+    const impliedScenarios = {};
+    ["bear", "base", "bull"].forEach((name) => {
+      const tweak = LAB_SCENARIO_TWEAKS[name];
+      const discount = clamp(state.lab.assumptions.discount + tweak.discountDelta, 4, 30);
+      const pe = clamp(state.lab.assumptions.pe * tweak.peMultiplier, 4, 60);
+      const solved = solveRequiredGrowth(
+        {
+          ...state.lab.assumptions,
+          discount,
+          pe,
+        },
+        currentPrice
+      );
+      impliedScenarios[name] = { ...solved, discount, pe };
+      setScenarioUIImplied(name, impliedScenarios[name]);
+    });
+
+    if (summary) {
+      const base = impliedScenarios.base;
+      if (!Number.isFinite(currentPrice)) {
+        summary.textContent = "Load a ticker to solve required growth at market price.";
+      } else if (base.status === "ok") {
+        summary.textContent = `To justify ${formatCurrency(currentPrice)} in the base case, earnings need to grow about ${base.growth.toFixed(
+          1
+        )}% annually for ${Math.round(state.lab.assumptions.years)} years.`;
+      } else if (base.status === "below-range") {
+        summary.textContent =
+          "Base-case required growth is below -40% in solver bounds, which implies your assumptions are very conservative versus current price.";
+      } else {
+        summary.textContent =
+          "Base-case required growth is above 80% in solver bounds, which implies your assumptions are too strict for current price.";
+      }
+    }
+    return;
+  }
+
+  if (assumptionSubtitle) {
+    assumptionSubtitle.textContent =
+      "Tune assumptions and see estimated fair value range. Use Required Growth mode to solve what growth must be true at today's price.";
+  }
+  if (resultSubtitle) {
+    resultSubtitle.textContent =
+      "Each scenario auto-adjusts growth, discount, and exit multiple around your base case.";
+  }
+
+  const fairScenarios = {
+    bear: calculateLabScenario(state.lab.assumptions, LAB_SCENARIO_TWEAKS.bear, currentPrice),
+    base: calculateLabScenario(state.lab.assumptions, LAB_SCENARIO_TWEAKS.base, currentPrice),
+    bull: calculateLabScenario(state.lab.assumptions, LAB_SCENARIO_TWEAKS.bull, currentPrice),
+  };
+  setScenarioUIFair("bear", fairScenarios.bear);
+  setScenarioUIFair("base", fairScenarios.base);
+  setScenarioUIFair("bull", fairScenarios.bull);
+
   if (summary) {
-    const spread = scenarios.bull.fairValue - scenarios.bear.fairValue;
+    const spread = fairScenarios.bull.fairValue - fairScenarios.bear.fairValue;
     const spreadPct =
-      scenarios.base.fairValue > 0 ? (spread / scenarios.base.fairValue) * 100 : null;
-    const rangeLine = `Range: ${formatCurrency(scenarios.bear.fairValue)} to ${formatCurrency(
-      scenarios.bull.fairValue
+      fairScenarios.base.fairValue > 0 ? (spread / fairScenarios.base.fairValue) * 100 : null;
+    const rangeLine = `Range: ${formatCurrency(fairScenarios.bear.fairValue)} to ${formatCurrency(
+      fairScenarios.bull.fairValue
     )} (${formatCurrency(spread)} spread${spreadPct === null ? "" : `, ${spreadPct.toFixed(
       1
     )}% of base`}).`;
     const mosLine =
-      scenarios.base.mos === null
+      fairScenarios.base.mos === null
         ? "Load a ticker to compare your scenario value against market price."
-        : `Base case implies ${scenarios.base.mos.toFixed(
+        : `Base case implies ${fairScenarios.base.mos.toFixed(
             1
           )}% margin of safety versus current price.`;
     summary.textContent = `${rangeLine} ${mosLine}`;
@@ -1612,11 +1760,53 @@ function init() {
     labGo.addEventListener("click", triggerLabLoad);
   }
 
-  ["lab-eps", "lab-growth", "lab-discount", "lab-pe", "lab-payout", "lab-years"].forEach((id) => {
-    const input = $(id);
-    if (!input) return;
-    input.addEventListener("input", () => {
-      readLabAssumptionsFromInputs();
+  Object.entries(LAB_FIELDS).forEach(([fieldKey, config]) => {
+    const range = $(config.rangeId);
+    const number = $(config.numberId);
+    if (range) {
+      range.addEventListener("input", () => {
+        updateLabField(fieldKey, range.value);
+        renderLab(state.data);
+      });
+    }
+    if (number) {
+      number.addEventListener("input", () => {
+        updateLabField(fieldKey, number.value);
+        renderLab(state.data);
+      });
+      number.addEventListener("blur", () => {
+        updateLabField(fieldKey, number.value);
+        renderLab(state.data);
+      });
+    }
+  });
+
+  const labModeFair = $("lab-mode-fair");
+  const labModeImplied = $("lab-mode-implied");
+  if (labModeFair) {
+    labModeFair.addEventListener("click", () => {
+      setLabMode("fair");
+      renderLab(state.data);
+    });
+  }
+  if (labModeImplied) {
+    labModeImplied.addEventListener("click", () => {
+      setLabMode("implied");
+      renderLab(state.data);
+    });
+  }
+
+  const presetButtons = [
+    ["lab-preset-conservative", "conservative"],
+    ["lab-preset-base", "base"],
+    ["lab-preset-optimistic", "optimistic"],
+    ["lab-preset-reset", "reset"],
+  ];
+  presetButtons.forEach(([id, kind]) => {
+    const btn = $(id);
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      applyLabPreset(kind);
       renderLab(state.data);
     });
   });

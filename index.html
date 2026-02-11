@@ -207,45 +207,81 @@
 
           <div class="lab-grid">
             <section class="lab-assumptions">
-              <h3>Assumptions</h3>
-              <p class="muted">This uses a discounted earnings model with payout and terminal multiple.</p>
+              <div class="lab-head-row">
+                <h3>Assumptions</h3>
+                <div class="lab-mode" role="group" aria-label="Lab mode">
+                  <button id="lab-mode-fair" class="lab-mode-btn is-active" type="button">Fair Value</button>
+                  <button id="lab-mode-implied" class="lab-mode-btn" type="button">Required Growth</button>
+                </div>
+              </div>
+              <p class="muted" id="lab-assumption-subtitle">
+                Tune assumptions and see estimated fair value range. Use Required Growth mode to solve what growth must be true at today's price.
+              </p>
+              <div class="lab-presets" role="group" aria-label="Assumption presets">
+                <button id="lab-preset-conservative" class="ghost lab-preset-btn" type="button">Conservative</button>
+                <button id="lab-preset-base" class="ghost lab-preset-btn" type="button">Base</button>
+                <button id="lab-preset-optimistic" class="ghost lab-preset-btn" type="button">Optimistic</button>
+                <button id="lab-preset-reset" class="ghost lab-preset-btn" type="button">Reset</button>
+              </div>
               <div class="lab-inputs">
                 <label class="lab-control">
-                  <span>Base EPS (USD)</span>
-                  <strong id="lab-eps-value">—</strong>
+                  <div class="lab-control-head">
+                    <span>Base EPS (USD)</span>
+                    <input id="lab-eps-num" type="number" min="0.5" max="30" step="0.1" />
+                  </div>
                   <input id="lab-eps" type="range" min="0.5" max="30" step="0.1" />
+                  <small class="lab-help">Starting earnings per share used for projection.</small>
                 </label>
                 <label class="lab-control">
-                  <span>Growth Rate (%)</span>
-                  <strong id="lab-growth-value">—</strong>
+                  <div class="lab-control-head">
+                    <span>Growth Rate (%)</span>
+                    <input id="lab-growth-num" type="number" min="-10" max="30" step="0.1" />
+                  </div>
                   <input id="lab-growth" type="range" min="-10" max="30" step="0.1" />
+                  <small class="lab-help">Annual EPS growth for the projection horizon.</small>
                 </label>
                 <label class="lab-control">
-                  <span>Discount Rate (%)</span>
-                  <strong id="lab-discount-value">—</strong>
+                  <div class="lab-control-head">
+                    <span>Discount Rate (%)</span>
+                    <input id="lab-discount-num" type="number" min="4" max="20" step="0.1" />
+                  </div>
                   <input id="lab-discount" type="range" min="4" max="20" step="0.1" />
+                  <small class="lab-help">Required return. Higher discount lowers present value.</small>
                 </label>
                 <label class="lab-control">
-                  <span>Exit P/E (x)</span>
-                  <strong id="lab-pe-value">—</strong>
+                  <div class="lab-control-head">
+                    <span>Exit P/E (x)</span>
+                    <input id="lab-pe-num" type="number" min="6" max="40" step="0.1" />
+                  </div>
                   <input id="lab-pe" type="range" min="6" max="40" step="0.1" />
+                  <small class="lab-help">Terminal multiple applied at the end of the horizon.</small>
                 </label>
                 <label class="lab-control">
-                  <span>Payout Ratio (%)</span>
-                  <strong id="lab-payout-value">—</strong>
+                  <div class="lab-control-head">
+                    <span>Payout Ratio (%)</span>
+                    <input id="lab-payout-num" type="number" min="0" max="80" step="1" />
+                  </div>
                   <input id="lab-payout" type="range" min="0" max="80" step="1" />
+                  <small class="lab-help">Percent of EPS assumed to be distributed each year.</small>
                 </label>
                 <label class="lab-control">
-                  <span>Horizon (years)</span>
-                  <strong id="lab-years-value">—</strong>
+                  <div class="lab-control-head">
+                    <span>Horizon (years)</span>
+                    <input id="lab-years-num" type="number" min="3" max="12" step="1" />
+                  </div>
                   <input id="lab-years" type="range" min="3" max="12" step="1" />
+                  <small class="lab-help">Projection length before terminal value is applied.</small>
                 </label>
+              </div>
+              <div class="lab-guidance">
+                <p><strong>How to read this:</strong> Small changes in discount rate or exit multiple can move value a lot.</p>
+                <p>Use Base first, then stress-test with Conservative and Optimistic presets.</p>
               </div>
             </section>
 
             <section class="lab-results">
               <h3>Scenario Outputs</h3>
-              <p class="muted">Each scenario auto-adjusts growth, discount, and exit multiple around your base case.</p>
+              <p class="muted" id="lab-results-subtitle">Each scenario auto-adjusts growth, discount, and exit multiple around your base case.</p>
               <div class="lab-cards">
                 <article class="lab-card bear">
                   <div class="lab-card-head">
