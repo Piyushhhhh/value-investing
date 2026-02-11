@@ -310,6 +310,22 @@
               <div class="lab-summary" id="lab-summary">
                 Scenario spread and margin of safety will appear here.
               </div>
+              <div class="lab-sensitivity">
+                <div class="lab-sensitivity-head">
+                  <h4>Sensitivity Map</h4>
+                  <span class="muted" id="lab-sensitivity-note">Fair value gap vs market</span>
+                </div>
+                <p class="muted lab-sensitivity-subtitle">
+                  Rows are discount rate, columns are growth rate. Each cell shows margin of safety.
+                </p>
+                <div class="lab-sensitivity-legend">
+                  <span class="legend-chip deep-neg">&lt; -20%</span>
+                  <span class="legend-chip neg">-20% to 0%</span>
+                  <span class="legend-chip flat">0% to +20%</span>
+                  <span class="legend-chip pos">&gt; +20%</span>
+                </div>
+                <div id="lab-sensitivity-grid" class="lab-sensitivity-grid"></div>
+              </div>
             </section>
           </div>
         </div>

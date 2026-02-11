@@ -55,6 +55,11 @@ const LAB_PRESET_FACTORS = {
   optimistic: { growthDelta: 3, discountDelta: -1, peMultiplier: 1.15, payoutDelta: 5 },
 };
 
+const LAB_SENSITIVITY = {
+  growthOffsets: [-6, -4, -2, 0, 2, 4, 6],
+  discountOffsets: [3, 2, 1, 0, -1, -2, -3],
+};
+
 function formatValue(value, suffix = "") {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   return `${value}${suffix}`;
@@ -726,6 +731,94 @@ function calculateLabScenario(assumptions, scenarioTweak, currentPrice) {
   return { fairValue, mos, growth, discount, pe, years };
 }
 
+function sensitivityTone(mos) {
+  if (!Number.isFinite(mos)) return "na";
+  if (mos < -20) return "deep-neg";
+  if (mos < 0) return "neg";
+  if (mos < 20) return "flat";
+  return "pos";
+}
+
+function renderLabSensitivity(data, assumptions) {
+  const container = $("lab-sensitivity-grid");
+  const note = $("lab-sensitivity-note");
+  if (!container) return;
+
+  const currentPrice = Number.isFinite(data?.price) ? data.price : null;
+  if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
+    if (note) note.textContent = "Load a ticker with current price to color the grid";
+    container.innerHTML =
+      `<div class="lab-sensitivity-empty">Sensitivity map becomes available after loading a ticker price.</div>`;
+    return;
+  }
+
+  if (note) {
+    note.textContent = `Base: growth ${assumptions.growth.toFixed(1)}% · discount ${assumptions.discount.toFixed(1)}%`;
+  }
+
+  const growthValues = LAB_SENSITIVITY.growthOffsets.map((offset) =>
+    clamp(assumptions.growth + offset, -40, 80)
+  );
+  const discountValues = LAB_SENSITIVITY.discountOffsets.map((offset) =>
+    clamp(assumptions.discount + offset, 4, 30)
+  );
+
+  container.innerHTML = "";
+  container.style.gridTemplateColumns = `94px repeat(${growthValues.length}, minmax(54px, 1fr))`;
+
+  const corner = document.createElement("div");
+  corner.className = "lab-map-header lab-map-corner";
+  corner.textContent = "r\\g";
+  container.appendChild(corner);
+
+  growthValues.forEach((growth) => {
+    const el = document.createElement("div");
+    el.className = "lab-map-header";
+    el.textContent = `${growth.toFixed(0)}%`;
+    el.title = `Growth ${growth.toFixed(1)}%`;
+    container.appendChild(el);
+  });
+
+  discountValues.forEach((discount) => {
+    const rowHead = document.createElement("div");
+    rowHead.className = "lab-map-row-head";
+    rowHead.textContent = `${discount.toFixed(1)}%`;
+    rowHead.title = `Discount ${discount.toFixed(1)}%`;
+    container.appendChild(rowHead);
+
+    growthValues.forEach((growth) => {
+      const fairValue = calculateLabFairValue({
+        ...assumptions,
+        growth,
+        discount,
+      });
+      const mos = ((fairValue - currentPrice) / currentPrice) * 100;
+      const cell = document.createElement("button");
+      cell.type = "button";
+      const isBase =
+        Math.abs(growth - assumptions.growth) < 0.05 &&
+        Math.abs(discount - assumptions.discount) < 0.05;
+      cell.className = `lab-map-cell ${sensitivityTone(mos)}${isBase ? " is-base" : ""}`;
+      cell.textContent = `${mos >= 0 ? "+" : ""}${mos.toFixed(0)}%`;
+      cell.title = `Growth ${growth.toFixed(1)}%, Discount ${discount.toFixed(
+        1
+      )}% -> Fair ${formatCurrency(fairValue)}, MOS ${mos.toFixed(1)}%`;
+      cell.setAttribute(
+        "aria-label",
+        `Growth ${growth.toFixed(1)} percent, discount ${discount.toFixed(
+          1
+        )} percent, margin of safety ${mos.toFixed(1)} percent`
+      );
+      cell.addEventListener("click", () => {
+        updateLabField("growth", growth);
+        updateLabField("discount", discount);
+        renderLab(data);
+      });
+      container.appendChild(cell);
+    });
+  });
+}
+
 function applyLabAssumptionsToInputs() {
   const assumptions = state.lab.assumptions;
   Object.entries(LAB_FIELDS).forEach(([key, config]) => {
@@ -1353,6 +1446,7 @@ function renderLab(data) {
           "Base-case required growth is above 80% in solver bounds, which implies your assumptions are too strict for current price.";
       }
     }
+    renderLabSensitivity(data, state.lab.assumptions);
     return;
   }
 
@@ -1391,6 +1485,7 @@ function renderLab(data) {
           )}% margin of safety versus current price.`;
     summary.textContent = `${rangeLine} ${mosLine}`;
   }
+  renderLabSensitivity(data, state.lab.assumptions);
 }
 
 function renderValuation(data) {
