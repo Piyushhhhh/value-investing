@@ -19,6 +19,7 @@
       </a>
       <nav class="nav">
         <a href="#/analyzer" id="nav-analyzer">Analyzer</a>
+        <a href="#/lab" id="nav-lab">Lab</a>
         <a href="#/compare" id="nav-compare">Battle</a>
         <a href="#/methodology">Methodology</a>
         <a href="#/support">Support</a>
@@ -176,6 +177,106 @@
         <div class="compare-board">
           <div class="compare-title">Tale of the Tape</div>
           <div id="compare-grid" class="compare-grid"></div>
+        </div>
+      </section>
+
+      <section id="route-lab" class="route" data-route="lab">
+        <div class="page-head lab-page-head">
+          <div>
+            <h2>Value Scenario Lab</h2>
+            <p class="muted">Build base, bull, and bear fair values from your own assumptions. Free-only model.</p>
+          </div>
+        </div>
+
+        <div class="panel lab-panel">
+          <div class="lab-toolbar">
+            <div class="lab-search">
+              <label for="lab-input">Ticker or company</label>
+              <div class="lab-search-row">
+                <input id="lab-input" placeholder="e.g., AAPL or Apple" />
+                <button id="lab-go" class="primary">Load</button>
+              </div>
+              <div id="lab-suggestions" class="suggestions"></div>
+            </div>
+            <div class="lab-meta">
+              <span class="muted">Current ticker</span>
+              <strong id="lab-company">—</strong>
+              <span class="muted" id="lab-price">Current price: —</span>
+            </div>
+          </div>
+
+          <div class="lab-grid">
+            <section class="lab-assumptions">
+              <h3>Assumptions</h3>
+              <p class="muted">This uses a discounted earnings model with payout and terminal multiple.</p>
+              <div class="lab-inputs">
+                <label class="lab-control">
+                  <span>Base EPS (USD)</span>
+                  <strong id="lab-eps-value">—</strong>
+                  <input id="lab-eps" type="range" min="0.5" max="30" step="0.1" />
+                </label>
+                <label class="lab-control">
+                  <span>Growth Rate (%)</span>
+                  <strong id="lab-growth-value">—</strong>
+                  <input id="lab-growth" type="range" min="-10" max="30" step="0.1" />
+                </label>
+                <label class="lab-control">
+                  <span>Discount Rate (%)</span>
+                  <strong id="lab-discount-value">—</strong>
+                  <input id="lab-discount" type="range" min="4" max="20" step="0.1" />
+                </label>
+                <label class="lab-control">
+                  <span>Exit P/E (x)</span>
+                  <strong id="lab-pe-value">—</strong>
+                  <input id="lab-pe" type="range" min="6" max="40" step="0.1" />
+                </label>
+                <label class="lab-control">
+                  <span>Payout Ratio (%)</span>
+                  <strong id="lab-payout-value">—</strong>
+                  <input id="lab-payout" type="range" min="0" max="80" step="1" />
+                </label>
+                <label class="lab-control">
+                  <span>Horizon (years)</span>
+                  <strong id="lab-years-value">—</strong>
+                  <input id="lab-years" type="range" min="3" max="12" step="1" />
+                </label>
+              </div>
+            </section>
+
+            <section class="lab-results">
+              <h3>Scenario Outputs</h3>
+              <p class="muted">Each scenario auto-adjusts growth, discount, and exit multiple around your base case.</p>
+              <div class="lab-cards">
+                <article class="lab-card bear">
+                  <div class="lab-card-head">
+                    <strong>Bear</strong>
+                    <span id="lab-bear-mos">MOS —</span>
+                  </div>
+                  <div class="lab-card-value" id="lab-bear-value">$—</div>
+                  <p id="lab-bear-note">Fair value estimate</p>
+                </article>
+                <article class="lab-card base">
+                  <div class="lab-card-head">
+                    <strong>Base</strong>
+                    <span id="lab-base-mos">MOS —</span>
+                  </div>
+                  <div class="lab-card-value" id="lab-base-value">$—</div>
+                  <p id="lab-base-note">Fair value estimate</p>
+                </article>
+                <article class="lab-card bull">
+                  <div class="lab-card-head">
+                    <strong>Bull</strong>
+                    <span id="lab-bull-mos">MOS —</span>
+                  </div>
+                  <div class="lab-card-value" id="lab-bull-value">$—</div>
+                  <p id="lab-bull-note">Fair value estimate</p>
+                </article>
+              </div>
+              <div class="lab-summary" id="lab-summary">
+                Scenario spread and margin of safety will appear here.
+              </div>
+            </section>
+          </div>
         </div>
       </section>
 

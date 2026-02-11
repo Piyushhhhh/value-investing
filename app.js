@@ -35,6 +35,12 @@ const FACTOR_DESCRIPTIONS = {
   dollarTest: "Value created per dollar of retained earnings.",
 };
 
+const LAB_SCENARIO_TWEAKS = {
+  bear: { growthDelta: -4, discountDelta: 2, peMultiplier: 0.8 },
+  base: { growthDelta: 0, discountDelta: 0, peMultiplier: 1 },
+  bull: { growthDelta: 4, discountDelta: -1.5, peMultiplier: 1.2 },
+};
+
 function formatValue(value, suffix = "") {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   return `${value}${suffix}`;
@@ -68,6 +74,10 @@ function formatPercent(value) {
 function formatRatio(value) {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   return value.toFixed(2);
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function formatDateValue(value) {
@@ -304,6 +314,7 @@ function emptyData(ticker = "") {
 const routes = [
   "home",
   "analyzer",
+  "lab",
   "compare",
   "valuation",
   "memo",
@@ -318,6 +329,17 @@ const state = {
   compare: {
     left: emptyData(""),
     right: emptyData(""),
+  },
+  lab: {
+    initializedForTicker: "",
+    assumptions: {
+      eps: 5,
+      growth: 8,
+      discount: 10,
+      pe: 18,
+      payout: 20,
+      years: 7,
+    },
   },
   error: null,
   loading: false,
@@ -360,8 +382,13 @@ function setLoading(isLoading) {
 
 function updateNavLinks() {
   const navAnalyzer = $("nav-analyzer");
-  if (!navAnalyzer) return;
-  navAnalyzer.href = state.ticker ? `#/analyzer/${encodeURIComponent(state.ticker)}` : "#/analyzer";
+  if (navAnalyzer) {
+    navAnalyzer.href = state.ticker ? `#/analyzer/${encodeURIComponent(state.ticker)}` : "#/analyzer";
+  }
+  const navLab = $("nav-lab");
+  if (navLab) {
+    navLab.href = state.ticker ? `#/lab/${encodeURIComponent(state.ticker)}` : "#/lab";
+  }
 }
 
 async function fetchSuggestions(query) {
@@ -415,6 +442,11 @@ function closeCompareSuggestions() {
     const container = $(id);
     if (container) container.classList.remove("is-active");
   });
+}
+
+function closeLabSuggestions() {
+  const container = $("lab-suggestions");
+  if (container) container.classList.remove("is-active");
 }
 
 async function resolveTickerFromInput(rawValue) {
@@ -588,6 +620,112 @@ function marginOfSafety(valuation) {
   const base = valuation.dcf.base || valuation.lynch || valuation.graham || valuation.current;
   if (!base || !valuation.current) return null;
   return ((base - valuation.current) / valuation.current) * 100;
+}
+
+function defaultLabAssumptions(data) {
+  const price = Number.isFinite(data?.price) ? data.price : null;
+  const impliedGrowth = Number.isFinite(data?.valuation?.impliedGrowth)
+    ? data.valuation.impliedGrowth
+    : null;
+  const netMargin = Number.isFinite(data?.metrics?.netMargin) ? data.metrics.netMargin : null;
+
+  const eps = clamp(price ? price / 22 : 5, 0.5, 30);
+  const growth = clamp(impliedGrowth ?? (netMargin !== null ? netMargin / 2 : 8), -10, 30);
+  const discount = 10;
+  const pe = clamp(18, 6, 40);
+  const payout = clamp(20, 0, 80);
+  const years = 7;
+
+  return { eps, growth, discount, pe, payout, years };
+}
+
+function calculateLabScenario(assumptions, scenarioTweak, currentPrice) {
+  const growth = clamp(assumptions.growth + scenarioTweak.growthDelta, -20, 40);
+  const discount = clamp(assumptions.discount + scenarioTweak.discountDelta, 4, 30);
+  const pe = clamp(assumptions.pe * scenarioTweak.peMultiplier, 4, 60);
+  const payout = clamp(assumptions.payout, 0, 95);
+  const years = Math.round(clamp(assumptions.years, 3, 12));
+
+  let eps = Math.max(0.01, assumptions.eps);
+  let pvDividends = 0;
+  for (let year = 1; year <= years; year += 1) {
+    eps *= 1 + growth / 100;
+    const dividend = eps * (payout / 100);
+    pvDividends += dividend / Math.pow(1 + discount / 100, year);
+  }
+
+  const terminalValue = eps * pe;
+  const discountedTerminal = terminalValue / Math.pow(1 + discount / 100, years);
+  const fairValue = Math.max(0, pvDividends + discountedTerminal);
+  const mos =
+    Number.isFinite(currentPrice) && currentPrice > 0
+      ? ((fairValue - currentPrice) / currentPrice) * 100
+      : null;
+
+  return { fairValue, mos, growth, discount, pe, years };
+}
+
+function syncLabValueLabels() {
+  const assumptions = state.lab.assumptions;
+  const pairs = [
+    ["lab-eps-value", `$${assumptions.eps.toFixed(2)}`],
+    ["lab-growth-value", `${assumptions.growth.toFixed(1)}%`],
+    ["lab-discount-value", `${assumptions.discount.toFixed(1)}%`],
+    ["lab-pe-value", `${assumptions.pe.toFixed(1)}x`],
+    ["lab-payout-value", `${assumptions.payout.toFixed(0)}%`],
+    ["lab-years-value", `${Math.round(assumptions.years)}y`],
+  ];
+
+  pairs.forEach(([id, value]) => {
+    const node = $(id);
+    if (node) node.textContent = value;
+  });
+}
+
+function applyLabAssumptionsToInputs() {
+  const assumptions = state.lab.assumptions;
+  const mapping = {
+    "lab-eps": assumptions.eps,
+    "lab-growth": assumptions.growth,
+    "lab-discount": assumptions.discount,
+    "lab-pe": assumptions.pe,
+    "lab-payout": assumptions.payout,
+    "lab-years": Math.round(assumptions.years),
+  };
+  Object.entries(mapping).forEach(([id, value]) => {
+    const input = $(id);
+    if (!input) return;
+    input.value = String(value);
+  });
+  syncLabValueLabels();
+}
+
+function readLabAssumptionsFromInputs() {
+  const read = (id, fallback) => {
+    const input = $(id);
+    if (!input) return fallback;
+    const parsed = Number(input.value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  state.lab.assumptions = {
+    eps: read("lab-eps", state.lab.assumptions.eps),
+    growth: read("lab-growth", state.lab.assumptions.growth),
+    discount: read("lab-discount", state.lab.assumptions.discount),
+    pe: read("lab-pe", state.lab.assumptions.pe),
+    payout: read("lab-payout", state.lab.assumptions.payout),
+    years: read("lab-years", state.lab.assumptions.years),
+  };
+  syncLabValueLabels();
+}
+
+function ensureLabDefaultsForTicker(data) {
+  const ticker = data?.ticker || "";
+  if (!ticker) return;
+  if (state.lab.initializedForTicker === ticker) return;
+  state.lab.assumptions = defaultLabAssumptions(data);
+  state.lab.initializedForTicker = ticker;
+  applyLabAssumptionsToInputs();
 }
 
 async function renderTrending() {
@@ -1039,6 +1177,74 @@ function renderAnalyzer(data) {
   }
 }
 
+function renderLab(data) {
+  ensureLabDefaultsForTicker(data);
+  applyLabAssumptionsToInputs();
+
+  const company = $("lab-company");
+  const priceEl = $("lab-price");
+  if (company) {
+    if (data?.ticker) {
+      company.textContent = data.name ? `${data.name} (${data.ticker})` : data.ticker;
+    } else {
+      company.textContent = "No ticker loaded";
+    }
+  }
+  if (priceEl) {
+    priceEl.textContent = `Current price: ${formatCurrency(data?.price ?? null)}`;
+  }
+
+  const currentPrice = Number.isFinite(data?.price) ? data.price : null;
+  const scenarios = {
+    bear: calculateLabScenario(state.lab.assumptions, LAB_SCENARIO_TWEAKS.bear, currentPrice),
+    base: calculateLabScenario(state.lab.assumptions, LAB_SCENARIO_TWEAKS.base, currentPrice),
+    bull: calculateLabScenario(state.lab.assumptions, LAB_SCENARIO_TWEAKS.bull, currentPrice),
+  };
+
+  const setScenarioUI = (name, scenario) => {
+    const valueNode = $(`lab-${name}-value`);
+    const mosNode = $(`lab-${name}-mos`);
+    const noteNode = $(`lab-${name}-note`);
+    if (valueNode) valueNode.textContent = formatCurrency(scenario.fairValue);
+    if (mosNode) {
+      mosNode.textContent = scenario.mos === null ? "MOS —" : `MOS ${scenario.mos.toFixed(1)}%`;
+      mosNode.className = scenario.mos === null
+        ? ""
+        : scenario.mos >= 0
+          ? "is-positive"
+          : "is-negative";
+    }
+    if (noteNode) {
+      noteNode.textContent = `g ${scenario.growth.toFixed(1)}% · r ${scenario.discount.toFixed(
+        1
+      )}% · exit ${scenario.pe.toFixed(1)}x`;
+    }
+  };
+
+  setScenarioUI("bear", scenarios.bear);
+  setScenarioUI("base", scenarios.base);
+  setScenarioUI("bull", scenarios.bull);
+
+  const summary = $("lab-summary");
+  if (summary) {
+    const spread = scenarios.bull.fairValue - scenarios.bear.fairValue;
+    const spreadPct =
+      scenarios.base.fairValue > 0 ? (spread / scenarios.base.fairValue) * 100 : null;
+    const rangeLine = `Range: ${formatCurrency(scenarios.bear.fairValue)} to ${formatCurrency(
+      scenarios.bull.fairValue
+    )} (${formatCurrency(spread)} spread${spreadPct === null ? "" : `, ${spreadPct.toFixed(
+      1
+    )}% of base`}).`;
+    const mosLine =
+      scenarios.base.mos === null
+        ? "Load a ticker to compare your scenario value against market price."
+        : `Base case implies ${scenarios.base.mos.toFixed(
+            1
+          )}% margin of safety versus current price.`;
+    summary.textContent = `${rangeLine} ${mosLine}`;
+  }
+}
+
 function renderValuation(data) {
   $("valuation-title").textContent = `${data.ticker} · Fair Value`;
 
@@ -1180,6 +1386,7 @@ async function loadCompare(left, right) {
 async function render() {
   const { route, ticker } = parseHash();
   const needsTicker = ["analyzer", "valuation", "memo", "snapshot"].includes(route);
+  const canUseOptionalTicker = route === "lab";
 
   if (route === "compare") {
     setActiveRoute("compare");
@@ -1217,7 +1424,7 @@ async function render() {
     return;
   }
 
-  if (ticker) {
+  if (ticker && (needsTicker || canUseOptionalTicker)) {
     setLoading(true);
     setActiveRoute(route);
     renderError(null);
@@ -1227,9 +1434,11 @@ async function render() {
   }
 
   setActiveRoute(route);
+  updateNavLinks();
   renderError(state.error);
   renderHomeHero(state.data);
   if (route === "analyzer") renderAnalyzer(state.data);
+  if (route === "lab") renderLab(state.data);
   if (route === "valuation") renderValuation(state.data);
   if (route === "memo") renderMemo(state.data);
   if (route === "snapshot") renderSnapshot(state.data);
@@ -1301,9 +1510,14 @@ function init() {
   }
 
   document.addEventListener("click", (event) => {
-    if (!event.target.closest(".search") && !event.target.closest(".compare-field")) {
+    if (
+      !event.target.closest(".search") &&
+      !event.target.closest(".compare-field") &&
+      !event.target.closest(".lab-search")
+    ) {
       closeSuggestions();
       closeCompareSuggestions();
+      closeLabSuggestions();
     }
   });
 
@@ -1324,6 +1538,88 @@ function init() {
       }
     });
   }
+
+  const navLab = $("nav-lab");
+  if (navLab) {
+    navLab.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (state.ticker) {
+        goTo("lab", state.ticker);
+      } else {
+        goTo("lab");
+      }
+    });
+  }
+
+  const labInput = $("lab-input");
+  const labGo = $("lab-go");
+  const labSuggestions = $("lab-suggestions");
+  const triggerLabLoad = async () => {
+    const picked = await resolveTickerFromInput(labInput?.value || "");
+    if (!picked) {
+      renderError("Enter a ticker to load the Scenario Lab.");
+      return;
+    }
+    renderError(null);
+    closeLabSuggestions();
+    goTo("lab", picked);
+  };
+
+  if (labInput && labSuggestions) {
+    const debouncedLabSuggest = debounce(async (value) => {
+      const list = await fetchSuggestions(value);
+      renderSuggestionsList(labSuggestions, list);
+    }, 250);
+
+    labInput.addEventListener("input", () => {
+      const value = labInput.value.trim();
+      if (value.length < 2) {
+        renderSuggestionsList(labSuggestions, []);
+        return;
+      }
+      debouncedLabSuggest(value);
+    });
+
+    labInput.addEventListener("focus", () => {
+      if (labSuggestions.childElementCount > 0) {
+        labSuggestions.classList.add("is-active");
+      }
+    });
+
+    labInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        triggerLabLoad();
+      }
+    });
+
+    const onPick = (event) => {
+      const row = event.target.closest(".suggestion-item");
+      if (!row) return;
+      event.preventDefault();
+      const ticker = row.dataset.ticker;
+      if (!ticker) return;
+      labInput.value = ticker;
+      closeLabSuggestions();
+      goTo("lab", ticker);
+    };
+
+    labSuggestions.addEventListener("pointerdown", onPick);
+    labSuggestions.addEventListener("click", onPick);
+  }
+
+  if (labGo) {
+    labGo.addEventListener("click", triggerLabLoad);
+  }
+
+  ["lab-eps", "lab-growth", "lab-discount", "lab-pe", "lab-payout", "lab-years"].forEach((id) => {
+    const input = $(id);
+    if (!input) return;
+    input.addEventListener("input", () => {
+      readLabAssumptionsFromInputs();
+      renderLab(state.data);
+    });
+  });
 
   const compareLeft = $("compare-left");
   const compareRight = $("compare-right");

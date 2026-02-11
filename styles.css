@@ -269,6 +269,189 @@ a {
   padding: 1.2rem 0.6rem;
 }
 
+.lab-page-head {
+  margin-bottom: 1rem;
+}
+
+.lab-panel {
+  background:
+    radial-gradient(circle at 92% 8%, rgba(47, 107, 255, 0.12), transparent 42%),
+    radial-gradient(circle at 6% 96%, rgba(255, 122, 26, 0.1), transparent 38%),
+    rgba(255, 255, 255, 0.95);
+}
+
+.lab-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+  gap: 0.9rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+.lab-search {
+  display: grid;
+  gap: 0.45rem;
+  position: relative;
+}
+
+.lab-search label {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.lab-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.lab-search-row input {
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--stroke);
+  font-size: 0.98rem;
+  background: white;
+  box-shadow: var(--shadow-soft);
+}
+
+.lab-search-row button {
+  min-width: 92px;
+}
+
+.lab-meta {
+  display: grid;
+  gap: 0.15rem;
+  border: 1px solid var(--stroke);
+  border-radius: 16px;
+  padding: 0.7rem 0.9rem;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--shadow-soft);
+}
+
+.lab-meta strong {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 1.05rem;
+}
+
+.lab-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.lab-assumptions,
+.lab-results {
+  border: 1px solid var(--stroke);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 1rem;
+}
+
+.lab-inputs {
+  margin-top: 0.7rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.lab-control {
+  border: 1px solid rgba(10, 15, 31, 0.12);
+  border-radius: 14px;
+  padding: 0.6rem 0.65rem;
+  display: grid;
+  gap: 0.3rem;
+  background: linear-gradient(160deg, #fffefb, #f7f3ec);
+}
+
+.lab-control span {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.lab-control strong {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 1rem;
+}
+
+.lab-control input[type="range"] {
+  width: 100%;
+  accent-color: #2f6bff;
+}
+
+.lab-cards {
+  margin-top: 0.7rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.lab-card {
+  border-radius: 14px;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--stroke);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 241, 231, 0.75));
+}
+
+.lab-card.bear {
+  border-color: rgba(180, 35, 24, 0.22);
+}
+
+.lab-card.base {
+  border-color: rgba(47, 107, 255, 0.25);
+}
+
+.lab-card.bull {
+  border-color: rgba(11, 139, 73, 0.25);
+}
+
+.lab-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  align-items: baseline;
+}
+
+.lab-card-head span {
+  font-size: 0.8rem;
+  color: #475467;
+}
+
+.lab-card-head .is-positive {
+  color: #0b8b49;
+  font-weight: 700;
+}
+
+.lab-card-head .is-negative {
+  color: #cc2b2b;
+  font-weight: 700;
+}
+
+.lab-card-value {
+  margin-top: 0.2rem;
+  font-size: 1.5rem;
+  font-family: "Bricolage Grotesque", sans-serif;
+  letter-spacing: -0.015em;
+}
+
+.lab-card p {
+  margin: 0.25rem 0 0;
+  font-size: 0.78rem;
+  color: #4a5568;
+}
+
+.lab-summary {
+  margin-top: 0.75rem;
+  border: 1px dashed rgba(10, 15, 31, 0.2);
+  border-radius: 12px;
+  padding: 0.6rem 0.75rem;
+  color: #384254;
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.86);
+}
+
 button {
   border: none;
   padding: 0.95rem 1.6rem;
@@ -1306,6 +1489,15 @@ textarea {
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .lab-toolbar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .lab-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {
@@ -1355,6 +1547,17 @@ textarea {
     padding: 0.14rem 0.4rem;
   }
 
+  .lab-inputs {
+    grid-template-columns: 1fr;
+  }
+
+  .lab-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .lab-search-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 760px) {
